@@ -147,24 +147,24 @@ int build_instance_massive(char *filename)
     vertex_weight=(int *)malloc(vertex_num*sizeof(int));//动态权重
 
 
-  for(j=0;j<vertex_num;j++){
-    //infile>>tempstr1>>v1>>v2;
-    //temp=(j+1)%200 + 1;
-    //cs[j].cost=temp;
-    //v1--;
-	cs[j].cost=1;
-    //cs[v1].cost=v2;
-    cs[j].config=2;
-    cs[j].time_stamp=1;
-    cs[j].is_in_c=0;
-    cs[j].num_in_c=0;
-    cs[j].locked = 0;
-    vertex_neightbourNum[j]=0;
-    best_sol[j]=0;
-    t[j] = 0;
-  }
+	for(j=0;j<vertex_num;j++){
+		//infile>>tempstr1>>v1>>v2;
+		//temp=(j+1)%200 + 1;
+		//cs[j].cost=temp;
+		//v1--;
+		cs[j].cost=1;
+		//cs[v1].cost=v2;
+		cs[j].config=2;
+		cs[j].time_stamp=1;
+		cs[j].is_in_c=0;
+		cs[j].num_in_c=0;
+		cs[j].locked = 0;
+		vertex_neightbourNum[j]=0;
+		best_sol[j]=0;
+		t[j] = 0;
+	}
 
-	for (e=0; e<edge_num; e++)
+	for (e=0; e<edge_num; e++)	
 	{
 		infile>>tempstr1>>v1>>v2;
 		v1--;
@@ -179,8 +179,6 @@ int build_instance_massive(char *filename)
 	/* build v_adj and v_edges arrays */
 	for (v=0; v<vertex_num; v++)
                 vertex[v]=new int[vertex_neightbourNum[v]];
-
-
 	for (e=0; e<edge_num; e++)
 	{
 		v1=edge[e].v1;
@@ -204,13 +202,13 @@ int build_instance_massive(char *filename)
     cs_vertex_index = (int *)malloc(vertex_num*sizeof(int));
     best_array = (int *)malloc(vertex_num*sizeof(int));
 
-	for(i=0;i<vertex_num;i++) {
-          vertex_weight[i]=1;
-          //cs[i].score=vertex_neightbourNum[i]+1;//自身也要算+1
-          cs[i].score = 0;
-          vertex_neightbourNum1[i] = vertex_neightbourNum[i];
+	for(i=0;i<vertex_num;i++) 
+	{
+		vertex_weight[i]=1;
+		//cs[i].score=vertex_neightbourNum[i]+1;//自身也要算+1
+		cs[i].score = 0;
+		vertex_neightbourNum1[i] = vertex_neightbourNum[i];
         }
-
     remain_num = vertex_num;
     uncover_num = vertex_num;
 

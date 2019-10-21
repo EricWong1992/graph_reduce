@@ -13,7 +13,7 @@ void buger()
 }
 
 void init(){
-    best_value=LONG_MAX; //取最大值
+    best_value = LONG_MAX; //取最大值
     cs_size = 0;
     locked_num = 0;
     tabu_list.clear();
@@ -889,22 +889,20 @@ void update_best_sol(){
 }
 
 int main(int argc, char *argv[]){
-
-
 	if(argc<3){
-    printf("input wrong\n");
-    return 0;
+        printf("input wrong\n");
+        return 0;
 	}
 
 	build_instance_massive(argv[1]);
   	//printf("%s	",argv[1]);
-        seed=atoi(argv[2]);
+    seed=atoi(argv[2]);
 	time_limit=atof(argv[3]);
 	total_step=INT_MAX;
 
 	srand(seed);
 
-        init();
+    init();
 	init_reduce();
 	/*printf("c %s",argv[1]);
 	printf("p cnf %d %d 201\n", remain_num, remain_num*2);
