@@ -37,6 +37,7 @@ typedef struct Vertex_information{
 	int cost;
 	int num_in_c;
 	int locked;
+	bool dominated;
 }Vertex_information;
 
 Vertex_information *cs;
@@ -97,6 +98,18 @@ void localsearch(int maxStep);
 long cost_C();
 void update_best_sol();
 int check();
+/**********api start*********/
+//get the degree of a vertex
+int getDegree(int v);
+//get the vertex is locked(is in mustin)
+bool getIsLocked(int v);
+//get the vertex is dominated(the vertex is covered)
+bool getIsDominated(int v);
+//get the target_v is can dominated if add_v is added
+bool isCanDominated(int add_v, int target_v);
+//neighbors got dominated
+void neighborGotDomimated(int v);
+/**********api end*********/
 
 void free_all(){
 
@@ -159,6 +172,7 @@ int build_instance_massive(char *filename)
 		cs[j].is_in_c=0;
 		cs[j].num_in_c=0;
 		cs[j].locked = 0;
+		cs[j].dominated = false;
 		vertex_neightbourNum[j]=0;
 		best_sol[j]=0;
 		t[j] = 0;
@@ -215,5 +229,44 @@ int build_instance_massive(char *filename)
 	return 1;
 }
 
+int getDegree(int v)
+{
+	return vertex_neightbourNum[v];
+}
 
+bool getIsLocked(int v)
+{
+	return cs[v].locked == 1;
+}
 
+bool getIsDominated(int v)
+{
+	if (getIsLocked(v)) 
+		return true;
+	return cs[v].dominated;
+}
+
+bool isCanDominated(int add_v, int target_v)
+{
+	if (getIsDominated(target_v)) return true;
+	int degree = getDegree(target_v);
+	for (size_t i = 0; i < degree; i++)
+	{
+		if (vertex[target_v][i] == add_v)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void neighborGotDomimated(int v)
+{
+	int neighbor_count = vertex_neightbourNum[v];
+	for (size_t i = 0; i < neighbor_count; i++)
+	{
+		int v_neighbor = vertex[v][i];
+		cs[v_neighbor].dominated = true;
+		reduce[v_neighbor] = 1;
+	}
+}

@@ -128,6 +128,53 @@ void init_reduce()
    // printf("%d %d ", vertex_num, remain_num);
 }
 
+void graph_reduce()
+{
+    int v_neighbor;
+    memset(reduce, 0, sizeof(reduce));
+    for (size_t i = 0; i < vertex_num; i++)
+    {
+        if (getDegree(i) == 0)
+        {
+            cs[i].locked = 1;
+        }
+        else if (getDegree(i) == 1)
+        {
+            v_neighbor = vertex[i][0];
+            if (!getIsLocked(i))
+            {
+                cs[v_neighbor].locked = 1;
+                neighborGotDomimated(v_neighbor);
+            }
+        }
+        else if (getDegree(i) == 2)
+        {
+            int v_a = vertex[i][0];
+            int v_b = vertex[i][1];
+            if ((getIsLocked(v_a) || getIsLocked(v_b)) || 
+                (getIsLocked(v_a) && getIsDominated(v_b)) || 
+                (getIsDominated(v_a) && getIsLocked(v_b)))
+            {
+                //i can be reduced directly
+                reduce[i] = 1;
+                cs[i].dominated = true;
+            }
+            else
+            {
+                //choose one neighbor whose degree is bigger join in the mustin
+                int v_add = getDegree(v_a) > getDegree(v_b) ? v_a : v_b;
+                cs[v_add].locked = 1;
+                neighborGotDomimated(v_add);
+            }
+        }
+        else
+        {
+
+        }
+    }
+    
+}
+
 inline int compare(int s1, int c1, int s2, int c2){
     if(c1==c2) {
         if(s1>s2) return 1;
