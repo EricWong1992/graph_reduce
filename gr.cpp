@@ -253,11 +253,11 @@ void print_reduce_graph()
                 if (reduce[j] != 1)
                     printf(" %d", j);
             }
+            printf("\n");
         }
-        printf("\n");
     }
-    printf("Original_Vertex_Num: %d", vertex_num);
-    printf("Reduced_Vertex_Num: %d", remain_vertex_num);
+    printf("Original_Vertex_Num: %d\n", vertex_num);
+    printf("Reduced_Vertex_Num: %d\n", remain_vertex_num);
 }
 
 inline int compare(int s1, int c1, int s2, int c2){
