@@ -98,6 +98,8 @@ void localsearch(int maxStep);
 long cost_C();
 void update_best_sol();
 int check();
+void graph_reduce();
+void print_reduce_graph();
 /**********api start*********/
 //get the degree of a vertex
 int getDegree(int v);
@@ -267,6 +269,5 @@ void neighborGotDomimated(int v)
 	{
 		int v_neighbor = vertex[v][i];
 		cs[v_neighbor].dominated = true;
-		reduce[v_neighbor] = 1;
 	}
 }

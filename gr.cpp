@@ -134,6 +134,8 @@ void graph_reduce()
     memset(reduce, 0, sizeof(reduce));
     for (size_t i = 0; i < vertex_num; i++)
     {
+        if (getIsLocked(i))
+            continue;
         if (getDegree(i) == 0)
         {
             cs[i].locked = 1;
@@ -144,7 +146,8 @@ void graph_reduce()
             if (!getIsLocked(i))
             {
                 cs[v_neighbor].locked = 1;
-                neighborGotDomimated(v_neighbor);
+                cs[i].dominated = true;
+                reduce[i] = 1;
             }
         }
         else if (getDegree(i) == 2)
@@ -159,20 +162,102 @@ void graph_reduce()
                 reduce[i] = 1;
                 cs[i].dominated = true;
             }
-            else
+            else if (!getIsDominated(v_a) && !getIsDominated(v_b))
             {
                 //choose one neighbor whose degree is bigger join in the mustin
-                int v_add = getDegree(v_a) > getDegree(v_b) ? v_a : v_b;
-                cs[v_add].locked = 1;
-                neighborGotDomimated(v_add);
+                int v_degree_max, v_degree_min;
+                if (getDegree(v_a) > getDegree(v_b))
+                {
+                    v_degree_max = v_a;
+                    v_degree_min = v_b;
+                }
+                else
+                {
+                    v_degree_max = v_b;
+                    v_degree_min = v_a;
+                }
+                //if add v_degree_max can dominate v_degree_min, then add v_degree_max
+                //else add i
+                if (isCanDominated(v_degree_max, v_degree_min))
+                {
+                    cs[v_degree_max].locked = 1;
+                    neighborGotDomimated(v_degree_max);
+                    reduce[i] = 1;
+                }
+                else
+                {
+                    cs[i].locked = 1;
+                    neighborGotDomimated(i);
+                }
+            }
+            else
+            {
+                int v_not_dominated = getIsDominated(v_a) ? v_b : v_a;
+                if (getDegree(v_not_dominated) > 2)
+                {
+                    cs[v_not_dominated].locked = 1;
+                    neighborGotDomimated(v_not_dominated);
+                    reduce[i] = 1;
+                }
+                else
+                {
+                    cs[i].locked = 1;
+                    neighborGotDomimated(i);
+                }
             }
         }
         else
         {
-
+            bool neighbor_locked = false;
+            bool neighbor_all_dominated = true;
+            int v_neighbor_count = vertex_neightbourNum[i];
+            for (size_t j = 0; j < v_neighbor_count; j++)
+            {
+                int v_neighbor = vertex[i][j];
+                if (getIsLocked(v_neighbor))
+                {
+                    neighbor_locked = true;
+                    continue;
+                }
+                if (!getIsDominated(v_neighbor))
+                    neighbor_all_dominated = false;
+            }
+            //i and its neighbors all have been dominated
+            if (neighbor_locked && neighbor_all_dominated)
+            {
+                reduce[i] = 1;
+            }
+            else
+            {
+                cs[i].locked = 1;
+                neighborGotDomimated(i);
+            }
         }
     }
-    
+    print_reduce_graph();
+}
+
+void print_reduce_graph()
+{
+    int remain_vertex_num = 0;
+    for (size_t i = 0; i < vertex_num; i++)
+    {
+        if (reduce[i] != 1)
+        {
+            printf("e %d", i);
+            remain_vertex_num++;
+            int neighbor_count = vertex_neightbourNum[i];
+            for (size_t j = 0; j < neighbor_count; j++)
+            {
+                int v_neighbor = vertex[i][j];
+                if (reduce[j] != 1)
+                    printf(" %d", j);
+            }
+        }
+        printf("\n");
+    }
+    printf("Original_Vertex_Num: %d", vertex_num);
+    printf("Reduced_Vertex_Num: %d", remain_vertex_num);
 }
 
 inline int compare(int s1, int c1, int s2, int c2){
@@ -950,7 +1035,9 @@ int main(int argc, char *argv[]){
 	srand(seed);
 
     init();
-	init_reduce();
+	// init_reduce();
+    graph_reduce();
+    return 0;
 	/*printf("c %s",argv[1]);
 	printf("p cnf %d %d 201\n", remain_num, remain_num*2);
 	for(int i = 0; i < remain_num; i++){
