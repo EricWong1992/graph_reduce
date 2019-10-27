@@ -30,12 +30,13 @@ int t_length;
 int *t_index;/////////////////////////////////////////
 
 typedef struct Vertex_information{
-	int score;
-	int time_stamp;
+	int num_in_c;
 	int config;
 	char is_in_c;
 	int cost;
-	int num_in_c;
+	//以下有用
+	int score;						//加入该顶点后，自己及邻居从未支配到支配的顶点数量
+	int time_stamp;
 	int locked;
 	bool dominated;
 }Vertex_information;
@@ -79,12 +80,13 @@ int locked_num;
 
 
 //int*	vertex[MAXV];//顶点集合
-int** vertex;
-int *vertex_neightbourNum;
-int *vertex_neightbourNum1;
+int** vertex;													//vertex 2d-array
+int *vertex_neightbourNum;					//neighbornum
+int *vertex_neightbourNum_bak;			//original neighbornum backup
 
-int *best_sol;//最优解
-int *vertex_weight;
+int *best_sol;					//最优解
+int *vertex_weight;		//顶点权值
+int *dominate_set;		//支配集
 
 void init();
 inline int compare(int s1, int c1, int s2, int c2);
@@ -111,11 +113,14 @@ bool getIsDominated(int v);
 bool isCanDominated(int add_v, int target_v);
 //neighbors got dominated
 void neighborGotDomimated(int v);
+//get the score of adding the vertex
+int getScore(int v);
+//add vertex to mustin
+void addVertex(int v);
 /**********api end*********/
 
 void free_all(){
-
-    free(vertex_neightbourNum1);
+    free(vertex_neightbourNum_bak);
 	free(vertex_neightbourNum);
 	free(best_sol);
 	free(vertex_weight);
@@ -138,49 +143,42 @@ int build_instance_massive(char *filename)
 	char line[1024];
 	char tempstr1[10];
 	char tempstr2[10];
-	int  v,e;
 	char	tmp;
 	int		v1,v2;
 
 	ifstream infile(filename);
-    //    if(infile==NULL) return 0;
 	/*** build problem data structures of the instance ***/
 	infile.getline(line,1024);
 	sscanf(line, "%s %s %d %d", tempstr1,tempstr2, &vertex_num, &edge_num);
 
-    int i,j,temp;
     edge = (Edge *)malloc(edge_num*sizeof(Edge));
     t = (int *)malloc(vertex_num*sizeof(int));
 
     cs = (Vertex_information *)malloc(vertex_num*sizeof(Vertex_information));
     vertex_neightbourNum = (int *)malloc(vertex_num*sizeof(int));
 
-    vertex_neightbourNum1 = (int *)malloc(vertex_num*sizeof(int));
+    vertex_neightbourNum_bak = (int *)malloc(vertex_num*sizeof(int));
     vertex = (int **)malloc((edge_num*2+1000)*sizeof(int));
 
     best_sol=(int *)malloc(vertex_num*sizeof(int));//最优解
     vertex_weight=(int *)malloc(vertex_num*sizeof(int));//动态权重
+	dominate_set = (int*)malloc(vertex_num * sizeof(int));//支配集
 
-
-	for(j=0;j<vertex_num;j++){
-		//infile>>tempstr1>>v1>>v2;
-		//temp=(j+1)%200 + 1;
-		//cs[j].cost=temp;
-		//v1--;
-		cs[j].cost=1;
-		//cs[v1].cost=v2;
-		cs[j].config=2;
-		cs[j].time_stamp=1;
-		cs[j].is_in_c=0;
-		cs[j].num_in_c=0;
-		cs[j].locked = 0;
-		cs[j].dominated = false;
-		vertex_neightbourNum[j]=0;
-		best_sol[j]=0;
-		t[j] = 0;
+	for(size_t i=0;i<vertex_num;i++){
+		cs[i].cost=1;
+		cs[i].config=2;
+		cs[i].time_stamp=1;
+		cs[i].is_in_c=0;
+		cs[i].num_in_c=0;
+		cs[i].locked = 0;
+		cs[i].dominated = false;
+		vertex_neightbourNum[i]=0;
+		best_sol[i]=0;
+		dominate_set[i] = 0;
+		t[i] = 0;
 	}
 
-	for (e=0; e<edge_num; e++)	
+	for (size_t e=0; e<edge_num; e++)	
 	{
 		infile>>tempstr1>>v1>>v2;
 		v1--;
@@ -193,16 +191,14 @@ int build_instance_massive(char *filename)
 	infile.close();
 
 	/* build v_adj and v_edges arrays */
-	for (v=0; v<vertex_num; v++)
+	for (size_t v=0; v<vertex_num; v++)
                 vertex[v]=new int[vertex_neightbourNum[v]];
-	for (e=0; e<edge_num; e++)
+	for (size_t e=0; e<edge_num; e++)
 	{
 		v1=edge[e].v1;
 		v2=edge[e].v2;
-
 		vertex[v1][t[v1]] = v2;
 		vertex[v2][t[v2]] = v1;
-
 		t[v1]++;
 		t[v2]++;
 	}
@@ -218,12 +214,11 @@ int build_instance_massive(char *filename)
     cs_vertex_index = (int *)malloc(vertex_num*sizeof(int));
     best_array = (int *)malloc(vertex_num*sizeof(int));
 
-	for(i=0;i<vertex_num;i++) 
+	for(size_t i=0;i<vertex_num;i++) 
 	{
 		vertex_weight[i]=1;
-		//cs[i].score=vertex_neightbourNum[i]+1;//自身也要算+1
-		cs[i].score = 0;
-		vertex_neightbourNum1[i] = vertex_neightbourNum[i];
+		cs[i].score = vertex_neightbourNum[i] + 1;//自身也要算+1
+		vertex_neightbourNum_bak[i] = vertex_neightbourNum[i];
         }
     remain_num = vertex_num;
     uncover_num = vertex_num;
@@ -269,5 +264,38 @@ void neighborGotDomimated(int v)
 	{
 		int v_neighbor = vertex[v][i];
 		cs[v_neighbor].dominated = true;
+	}
+}
+
+int getScore(int v)
+{
+	return cs[v].score;
+}
+
+void addVertex(int v)
+{
+	cs[v].locked = 1;
+	dominate_set[v] = 1;
+	cs[v].score = 0;
+	int v_neighbor_count = vertex_neightbourNum[i];
+	//修改v的邻居们的被支配状态
+	for (size_t i = 0; i < v_neighbor_count; i++)
+	{
+		int v_neighbor = vertex[v][i];
+		cs[v_neighbor].dominated = 1;
+	}
+	//修改v的邻居们的score值
+	for (size_t i = 0; i < v_neighbor_count; i++)
+	{
+		int new_v = vertex[v][i];
+		int new_v_neighbor_count = vertex_neightbourNum[new_v];
+		int score = 0;
+		for (size_t j = 0; j < new_v_neighbor_count; j++)
+		{
+			int new_v_neighbor = vertex[new_v][j];
+			if (!getIsLocked(new_v_neighbor) && !getIsDominated(new_v_neighbor))
+				score++;
+		}
+		cs[new_v].score = score;
 	}
 }

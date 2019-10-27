@@ -132,6 +132,63 @@ void graph_reduce()
 {
     int v_neighbor;
     memset(reduce, 0, sizeof(reduce));
+    int flag = 1;
+    while (flag == 1)
+    {
+        flag = 0;
+        for (size_t i = 0; i < vertex_num; i++)
+        {
+            if (reduce[i] == 1)
+                continue;
+            if (getDegree(i) == 0)
+                addVertex(i);
+            else if (getDegree(i) == 1)
+            {
+                int vertex_neighbor = vertex[i][0];
+                addVertex(vertex_neighbor);
+                reduce[i] = 1;
+            }
+            else if (getDegree(i) == 2)
+            {
+                int v_a = vertex[i][0];
+                int v_b = vertex[i][1];
+                //判断是否有1度邻居，如果有i加入支配集
+                if (getDegree(v_a) == 1 || getDegree(v_b) == 1)
+                {
+                    addVertex(i);
+                    if (getDegree(v_a) == 1)
+                        reduce[v_a];
+                    if (getDegree(v_b) == 2)
+                        reduce[v_b];
+                }
+                else
+                {
+                    //TODO:判断是否有邻居已经加入支配集
+                    int score_a = getScore(v_a);
+                    int score_b = getScore(v_b);
+                    int uncover_v = 0;
+                    if (score_a >= score_b)
+                    {
+                        addVertex(score_a);
+                        uncover_v = v_b;
+                    }
+                    else
+                    {
+                        addVertex(score_b);
+                        uncover_v = v_a;
+                    }
+                    //TODO:判断加入新节点后uncover_v是否被支配
+                    if (!getIsDominated(uncover_v))
+                    {
+                        
+                    }
+                }
+                
+            }
+        }
+    }
+
+    
     for (size_t i = 0; i < vertex_num; i++)
     {
         if (getIsLocked(i))
@@ -244,20 +301,20 @@ void print_reduce_graph()
     {
         if (reduce[i] != 1)
         {
-            printf("e %d", i);
-            remain_vertex_num++;
-            int neighbor_count = vertex_neightbourNum[i];
-            for (size_t j = 0; j < neighbor_count; j++)
-            {
-                int v_neighbor = vertex[i][j];
-                if (reduce[j] != 1)
-                    printf(" %d", j);
-            }
-            printf("\n");
+            printf("%d ", i+1);
+            // remain_vertex_num++;
+            // int neighbor_count = vertex_neightbourNum[i];
+            // for (size_t j = 0; j < neighbor_count; j++)
+            // {
+            //     int v_neighbor = vertex[i][j];
+            //     if (reduce[j] != 1)
+            //         printf(" %d", j+1);
+            // }
         }
     }
-    printf("Original_Vertex_Num: %d\n", vertex_num);
-    printf("Reduced_Vertex_Num: %d\n", remain_vertex_num);
+    printf("\n");
+    printf("Before_Vertex_Num: %d\n", vertex_num);
+    printf("After_Vertex_Num: %d\n", remain_vertex_num);
 }
 
 inline int compare(int s1, int c1, int s2, int c2){
@@ -313,7 +370,7 @@ int check(){ // check if the solution is a correct cover
         if(best_sol[j]==0) 
             continue;
         reduce[j]=1;
-        for(k=0;k<vertex_neightbourNum1[j];k++)
+        for(k=0;k<vertex_neightbourNum_bak[j];k++)
         {
             reduce[vertex[j][k]]=1;
         }
@@ -371,7 +428,7 @@ void init_best(){
    //printf("%d  ", vertex_num - uncover_num);
    //printf("\n");
     free_all();
-    exit(0);
+    // exit(0);
     int sst = 0;
     int uncover_v;
     while(uncover_num>0){
