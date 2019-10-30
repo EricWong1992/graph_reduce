@@ -123,6 +123,7 @@ void free_all(){
     free(vertex_neightbourNum_bak);
 	free(vertex_neightbourNum);
 	free(best_sol);
+	free(dominate_set);
 	free(vertex_weight);
 	free(t);
 	free(t_index);
