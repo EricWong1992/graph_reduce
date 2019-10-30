@@ -288,9 +288,9 @@ void update_score(int v, int cur_level, int total_level)
 	for (size_t i = 0; i < neighbor_count; i++)
 	{
 		int v_neighbor = vertex[v][i];
-		if (!getIsDominated(v_neighbor));
+		if (!getIsDominated(v_neighbor))
 			score++;
-		update_score(v_neighbor, cur_level++, total_level);
+		update_score(v_neighbor, ++cur_level, total_level);
 	}
 	cs[v].score = score;
 }

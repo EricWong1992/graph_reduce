@@ -1,2 +1,2 @@
-# ./gr ca-dblp-2012.mtx 10 20
-./gr test.mtx 10 20
+./gr ca-dblp-2012.mtx 10 20
+#./gr test.mtx 10 20

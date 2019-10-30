@@ -171,20 +171,21 @@ void graph_reduce()
             else
             {
                 //score值大于等于3，把邻居score值最大的节点添加
-                int v_max_score_index = i;
-                int v_max_score = cs[i].score;
-                int neighbor_count = vertex_neightbourNum[i];
-                for (size_t j = 0; j < neighbor_count; j++)
-                {
-                    int v_neighbor = vertex[i][j];
-                    if (cs[v_neighbor].score > v_max_score)
-                    {
-                        v_max_score = cs[v_neighbor].score;
-                        v_max_score_index = v_neighbor;
-                    }
-                }
-                addVertex(v_max_score_index);
-                flag = 1;
+                // int v_max_score_index = i;
+                // int v_max_score = cs[i].score;
+                // int neighbor_count = vertex_neightbourNum[i];
+                // for (size_t j = 0; j < neighbor_count; j++)
+                // {
+                //     int v_neighbor = vertex[i][j];
+                //     if (cs[v_neighbor].score > v_max_score)
+                //     {
+                //         v_max_score = cs[v_neighbor].score;
+                //         v_max_score_index = v_neighbor;
+                //     }
+                // }
+                // addVertex(v_max_score_index);
+                // flag = 1;
+                continue;
             }
         }
     };
@@ -199,7 +200,6 @@ void print_reduce_graph()
     {
         if (cs[i].locked == 1)
         {
-            printf("%d ", i+1);
             remain_vertex_num++;
         }
     }
