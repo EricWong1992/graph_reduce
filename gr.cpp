@@ -130,167 +130,65 @@ void init_reduce()
 
 void graph_reduce()
 {
-    int v_neighbor;
     memset(reduce, 0, sizeof(reduce));
-    int flag = 1;
+    int flag = 1;       //是否发生操作
+    int iter = 0;
+    cout << "graph_reduce"<<endl;
     while (flag == 1)
     {
+        cout << "iter:" << ++iter << endl;;
         flag = 0;
         for (size_t i = 0; i < vertex_num; i++)
         {
-            if (reduce[i] == 1)
+            if (cs[i].score == 0)
                 continue;
-            if (getDegree(i) == 0)
-                addVertex(i);
-            else if (getDegree(i) == 1)
+            else if (cs[i].score == 1 || cs[i].score == 2)
             {
-                int vertex_neighbor = vertex[i][0];
-                addVertex(vertex_neighbor);
-                reduce[i] = 1;
-            }
-            else if (getDegree(i) == 2)
-            {
-                int v_a = vertex[i][0];
-                int v_b = vertex[i][1];
-                //判断是否有1度邻居，如果有i加入支配集
-                if (getDegree(v_a) == 1 || getDegree(v_b) == 1)
+                int score = cs[i].score;//邻居节点修改个数，提前终止for循环
+                if (!getIsDominated(i))
                 {
                     addVertex(i);
-                    if (getDegree(v_a) == 1)
-                        reduce[v_a];
-                    if (getDegree(v_b) == 2)
-                        reduce[v_b];
+                    flag = 1;
                 }
                 else
                 {
-                    //TODO:判断是否有邻居已经加入支配集
-                    int score_a = getScore(v_a);
-                    int score_b = getScore(v_b);
-                    int uncover_v = 0;
-                    if (score_a >= score_b)
+                    int neighbor_count = vertex_neightbourNum[i];
+                    int modify_vertex = 0;
+                    for (size_t j = 0; j < neighbor_count; j++)
                     {
-                        addVertex(score_a);
-                        uncover_v = v_b;
-                    }
-                    else
-                    {
-                        addVertex(score_b);
-                        uncover_v = v_a;
-                    }
-                    //TODO:判断加入新节点后uncover_v是否被支配
-                    if (!getIsDominated(uncover_v))
-                    {
-                        
+                        int v_neighbor = vertex[i][j];
+                        if (!getIsDominated(v_neighbor))
+                        {
+                            addVertex(v_neighbor);
+                            flag = 1;
+                            //达到终止条件
+                            if (++modify_vertex == score)
+                                break;
+                        }
                     }
                 }
-                
+            }
+            else
+            {
+                //score值大于等于3，把邻居score值最大的节点添加
+                int v_max_score_index = i;
+                int v_max_score = cs[i].score;
+                int neighbor_count = vertex_neightbourNum[i];
+                for (size_t j = 0; j < neighbor_count; j++)
+                {
+                    int v_neighbor = vertex[i][j];
+                    if (cs[v_neighbor].score > v_max_score)
+                    {
+                        v_max_score = cs[v_neighbor].score;
+                        v_max_score_index = v_neighbor;
+                    }
+                }
+                addVertex(v_max_score_index);
+                flag = 1;
             }
         }
-    }
-
+    };
     
-    for (size_t i = 0; i < vertex_num; i++)
-    {
-        if (getIsLocked(i))
-            continue;
-        if (getDegree(i) == 0)
-        {
-            cs[i].locked = 1;
-        }
-        else if (getDegree(i) == 1)
-        {
-            v_neighbor = vertex[i][0];
-            if (!getIsLocked(i))
-            {
-                cs[v_neighbor].locked = 1;
-                cs[i].dominated = true;
-                reduce[i] = 1;
-            }
-        }
-        else if (getDegree(i) == 2)
-        {
-            int v_a = vertex[i][0];
-            int v_b = vertex[i][1];
-            if ((getIsLocked(v_a) || getIsLocked(v_b)) || 
-                (getIsLocked(v_a) && getIsDominated(v_b)) || 
-                (getIsDominated(v_a) && getIsLocked(v_b)))
-            {
-                //i can be reduced directly
-                reduce[i] = 1;
-                cs[i].dominated = true;
-            }
-            else if (!getIsDominated(v_a) && !getIsDominated(v_b))
-            {
-                //choose one neighbor whose degree is bigger join in the mustin
-                int v_degree_max, v_degree_min;
-                if (getDegree(v_a) > getDegree(v_b))
-                {
-                    v_degree_max = v_a;
-                    v_degree_min = v_b;
-                }
-                else
-                {
-                    v_degree_max = v_b;
-                    v_degree_min = v_a;
-                }
-                //if add v_degree_max can dominate v_degree_min, then add v_degree_max
-                //else add i
-                if (isCanDominated(v_degree_max, v_degree_min))
-                {
-                    cs[v_degree_max].locked = 1;
-                    neighborGotDomimated(v_degree_max);
-                    reduce[i] = 1;
-                }
-                else
-                {
-                    cs[i].locked = 1;
-                    neighborGotDomimated(i);
-                }
-            }
-            else
-            {
-                int v_not_dominated = getIsDominated(v_a) ? v_b : v_a;
-                if (getDegree(v_not_dominated) > 2)
-                {
-                    cs[v_not_dominated].locked = 1;
-                    neighborGotDomimated(v_not_dominated);
-                    reduce[i] = 1;
-                }
-                else
-                {
-                    cs[i].locked = 1;
-                    neighborGotDomimated(i);
-                }
-            }
-        }
-        else
-        {
-            bool neighbor_locked = false;
-            bool neighbor_all_dominated = true;
-            int v_neighbor_count = vertex_neightbourNum[i];
-            for (size_t j = 0; j < v_neighbor_count; j++)
-            {
-                int v_neighbor = vertex[i][j];
-                if (getIsLocked(v_neighbor))
-                {
-                    neighbor_locked = true;
-                    continue;
-                }
-                if (!getIsDominated(v_neighbor))
-                    neighbor_all_dominated = false;
-            }
-            //i and its neighbors all have been dominated
-            if (neighbor_locked && neighbor_all_dominated)
-            {
-                reduce[i] = 1;
-            }
-            else
-            {
-                cs[i].locked = 1;
-                neighborGotDomimated(i);
-            }
-        }
-    }
     print_reduce_graph();
 }
 
@@ -299,17 +197,10 @@ void print_reduce_graph()
     int remain_vertex_num = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
-        if (reduce[i] != 1)
+        if (cs[i].locked == 1)
         {
             printf("%d ", i+1);
-            // remain_vertex_num++;
-            // int neighbor_count = vertex_neightbourNum[i];
-            // for (size_t j = 0; j < neighbor_count; j++)
-            // {
-            //     int v_neighbor = vertex[i][j];
-            //     if (reduce[j] != 1)
-            //         printf(" %d", j+1);
-            // }
+            remain_vertex_num++;
         }
     }
     printf("\n");

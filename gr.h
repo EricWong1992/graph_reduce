@@ -111,12 +111,12 @@ bool getIsLocked(int v);
 bool getIsDominated(int v);
 //get the target_v is can dominated if add_v is added
 bool isCanDominated(int add_v, int target_v);
-//neighbors got dominated
-void neighborGotDomimated(int v);
 //get the score of adding the vertex
 int getScore(int v);
 //add vertex to mustin
 void addVertex(int v);
+//update vertex score
+void update_score(int v, int cur_level, int total_level);
 /**********api end*********/
 
 void free_all(){
@@ -257,16 +257,6 @@ bool isCanDominated(int add_v, int target_v)
 	return false;
 }
 
-void neighborGotDomimated(int v)
-{
-	int neighbor_count = vertex_neightbourNum[v];
-	for (size_t i = 0; i < neighbor_count; i++)
-	{
-		int v_neighbor = vertex[v][i];
-		cs[v_neighbor].dominated = true;
-	}
-}
-
 int getScore(int v)
 {
 	return cs[v].score;
@@ -275,27 +265,32 @@ int getScore(int v)
 void addVertex(int v)
 {
 	cs[v].locked = 1;
-	dominate_set[v] = 1;
-	cs[v].score = 0;
-	int v_neighbor_count = vertex_neightbourNum[i];
+	int v_neighbor_count = vertex_neightbourNum[v];
 	//修改v的邻居们的被支配状态
 	for (size_t i = 0; i < v_neighbor_count; i++)
 	{
 		int v_neighbor = vertex[v][i];
-		cs[v_neighbor].dominated = 1;
+		cs[v_neighbor].dominated = true;
 	}
-	//修改v的邻居们的score值
-	for (size_t i = 0; i < v_neighbor_count; i++)
+	//递归修改score值
+	//total_level为1仅修改当前节点
+	//total_level为2修改到邻居节点
+	//total_level为3修改到邻居的邻居节点
+	update_score(v, 1, 3);
+}
+
+//更新score值，按层级进行
+void update_score(int v, int cur_level, int total_level)
+{
+	if (cur_level > total_level) return;
+	int neighbor_count = vertex_neightbourNum[v];
+	int score = 0;
+	for (size_t i = 0; i < neighbor_count; i++)
 	{
-		int new_v = vertex[v][i];
-		int new_v_neighbor_count = vertex_neightbourNum[new_v];
-		int score = 0;
-		for (size_t j = 0; j < new_v_neighbor_count; j++)
-		{
-			int new_v_neighbor = vertex[new_v][j];
-			if (!getIsLocked(new_v_neighbor) && !getIsDominated(new_v_neighbor))
-				score++;
-		}
-		cs[new_v].score = score;
+		int v_neighbor = vertex[v][i];
+		if (!getIsDominated(v_neighbor));
+			score++;
+		update_score(v_neighbor, cur_level++, total_level);
 	}
+	cs[v].score = score;
 }
