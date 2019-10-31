@@ -25,6 +25,7 @@ Edge *edge;////////////////////////////////////////
 
 int edge_num;
 
+//存储score为0的节点
 int *t;/////////////////////////////////
 int t_length;
 int *t_index;/////////////////////////////////////////
@@ -113,8 +114,8 @@ bool getIsDominated(int v);
 bool isCanDominated(int add_v, int target_v);
 //get the score of adding the vertex
 int getScore(int v);
-//add vertex to mustin
-void addVertex(int v);
+//add vertex to C
+void addVertex(int c, int locked_add);
 //update vertex score
 void update_score(int v, int cur_level, int total_level);
 /**********api end*********/
@@ -261,23 +262,6 @@ bool isCanDominated(int add_v, int target_v)
 int getScore(int v)
 {
 	return cs[v].score;
-}
-
-void addVertex(int v)
-{
-	cs[v].locked = 1;
-	int v_neighbor_count = vertex_neightbourNum[v];
-	//修改v的邻居们的被支配状态
-	for (size_t i = 0; i < v_neighbor_count; i++)
-	{
-		int v_neighbor = vertex[v][i];
-		cs[v_neighbor].dominated = true;
-	}
-	//递归修改score值
-	//total_level为1仅修改当前节点
-	//total_level为2修改到邻居节点
-	//total_level为3修改到邻居的邻居节点
-	update_score(v, 1, 3);
 }
 
 //更新score值，按层级进行

@@ -128,6 +128,123 @@ void init_reduce()
    // printf("%d %d ", vertex_num, remain_num);
 }
 
+//顶点的被支配次数0->1
+void remove_from_uncover(int v)
+{
+    uncover_num--;
+    int uk = uncover_vertex_index[v];
+    int ck = uncover_vertex[uncover_num];
+    uncover_vertex[uk] = ck;
+    uncover_vertex_index[ck] = uk;
+}
+
+//顶点score值改变，判断加入t还是移出t
+void modify_t(int v)
+{
+    if (cs[v].score == 0 && cs[v].is_in_c == 1 && t_index[v] == -1 && cs[v].locked == 0)
+    {
+        t[t_length] = v;
+        t_index[v] = t_length++;
+    }
+    else if (t_index[v] != -1 && cs[v].score != 0)
+    {
+        t_length--;
+        int uk = t_index[v];
+        int ck = t[t_length];
+        t[uk] = ck;
+        t_index[ck] = uk;
+        t_index[v] = -1;
+    }
+}
+
+//把顶点c加入候选解
+void addVertex(int c, int locked_add)
+{
+    cs[c].locked = 1;
+    cs[c].is_in_c = 1;
+    if (locked_add == 1)
+    {
+        cs_vertex[cs_size] = c;
+        cs_vertex_index[c] = cs_size++;
+    }
+    cs[c].score = -cs[c].score;
+    if (cs[c].score == 0 && t_index[c] == -1 && cs[c].locked == 0)
+    {
+        t[t_length] = c;
+        t_index[c] = t_length++;
+    }
+    if (cs[c].num_in_c == 0)
+        remove_from_uncover(c);
+    for (size_t h = 0; h < vertex_neightbourNum[c]; h++)
+    {
+        int i = vertex[c][h];
+        if (cs[i].num_in_c == 0)
+            remove_from_uncover(i);
+        cs[i].num_in_c++;
+        if (cs[c].num_in_c ==0)
+            //i被支配，修改score
+            //c 支配次数 0->1
+            cs[i].score -= vertex_weight[c];
+        else if (cs[c].num_in_c == 1 && cs[i].is_in_c == 1)
+        {
+            //i存在在候选解, 此时i的score值为负
+            //c 支配次数 1->2
+            cs[i].score += vertex_weight[c];
+        }
+        if (cs[i].is_in_c == 1)
+        {
+            if (cs[i].num_in_c == 2)
+                /*
+                    i已经在候选解，c加入候选解后，i又被支配了一次
+                */
+                cs[i].score += vertex_weight[i]; //TODO why
+            modify_t(i);
+            continue;
+        }
+        //处理二层邻居
+        int cnt = 0;
+        int s = 0;
+        for (size_t l = 0; l < vertex_neightbourNum[i]; l++)
+        {
+            int j = vertex[i][l];
+            if (j == c)
+                continue;
+            if (cs[j].is_in_c)
+            {
+                s = j;
+                cnt++;
+            }
+        }
+        if (cs[i].is_in_c)
+        {
+            s = i;
+            cnt++;
+        }
+        if (cnt == 0)
+        {
+            //c是i的邻居里面第一个加入候选解的
+            cs[i].score -= vertex_weight[i];
+            for (size_t l = 0; l < vertex_neightbourNum[i]; l++)
+            {
+                int j = vertex[i][l];
+                if (j == c)
+                    continue;
+                //i被c支配，所以二层邻居j score值减少
+                cs[j].score -= vertex_weight[i];
+                modify_t(j);
+            }
+        }
+        else if (cnt == 1)
+        {
+            //c是这里组里第二个加入候选解的顶点
+            cs[s].score += vertex_weight[i];
+            modify_t(s);
+        }
+        modify_t(i);
+    }
+    cs[c].num_in_c++;
+}
+
 void graph_reduce()
 {
     memset(reduce, 0, sizeof(reduce));
@@ -145,9 +262,9 @@ void graph_reduce()
             else if (cs[i].score == 1 || cs[i].score == 2)
             {
                 int score = cs[i].score;//邻居节点修改个数，提前终止for循环
-                if (!getIsDominated(i))
+                if (cs[i].num_in_c == 0)
                 {
-                    addVertex(i);
+                    addVertex(i, 1);
                     flag = 1;
                 }
                 else
@@ -157,9 +274,9 @@ void graph_reduce()
                     for (size_t j = 0; j < neighbor_count; j++)
                     {
                         int v_neighbor = vertex[i][j];
-                        if (!getIsDominated(v_neighbor))
+                        if (cs[v_neighbor].num_in_c == 0)
                         {
-                            addVertex(v_neighbor);
+                            addVertex(v_neighbor, 1);
                             flag = 1;
                             //达到终止条件
                             if (++modify_vertex == score)
@@ -183,7 +300,7 @@ void graph_reduce()
                 //         v_max_score_index = v_neighbor;
                 //     }
                 // }
-                // addVertex(v_max_score_index);
+                // addVertex(v_max_score_index, 1);
                 // flag = 1;
                 continue;
             }
@@ -195,17 +312,21 @@ void graph_reduce()
 
 void print_reduce_graph()
 {
-    int remain_vertex_num = 0;
+    int locked_num = 0;
+    int uncover_num = 0;
+    int remove_num = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
         if (cs[i].locked == 1)
-        {
-            remain_vertex_num++;
-        }
+            locked_num++;
+        if (cs[i].num_in_c == 0)
+            uncover_num++;
     }
-    printf("\n");
-    printf("Before_Vertex_Num: %d\n", vertex_num);
-    printf("After_Vertex_Num: %d\n", remain_vertex_num);
+    remove_num = vertex_num - locked_num - uncover_num;
+    cout << "总节点数：" << vertex_num << endl;
+    cout << "固定节点数：" << locked_num << endl;
+    cout << "未支配个数：" << uncover_num << endl;
+    cout << "删除顶点个数：" << remove_num << endl;
 }
 
 inline int compare(int s1, int c1, int s2, int c2){

@@ -289,7 +289,7 @@ void init_best(){
 }
 
 
-void add(int c, int locked_add, int init_add){
+void add(int c, int locked_add, int init_add){ 
     int i,j,k,cnt,s, ii, jj, ix;
     int uk,ck;
     cs[c].is_in_c=1;
@@ -342,19 +342,20 @@ void add(int c, int locked_add, int init_add){
         if(cs[c].num_in_c==0)
         {
             //c没有邻居没有添加到候选解，对邻居i减去c weight
-            //c score 0->1
+            //c 支配次数 0->1
             cs[i].score-=vertex_weight[c];
         }
         else if (cs[c].num_in_c==1 && cs[i].is_in_c==1)
         {
             //i已经在候选解，且i支配c，此时i的score是负
-            //c score 1->2
+            //c 支配次数 1->2
             cs[i].score+=vertex_weight[c];
         }
 
         if(cs[i].is_in_c && init_add == 0)
         {
             if(cs[i].num_in_c == 2)
+                //TODO？？？
                 cs[i].score += vertex_weight[i];
             if(cs[i].score == 0 && t_index[i] == -1 && cs[i].locked == 0)
             {
