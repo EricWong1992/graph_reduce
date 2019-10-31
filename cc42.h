@@ -178,7 +178,7 @@ int build_instance_massive(char *filename)
 
 	/* build v_adj and v_edges arrays */
 	for (v=0; v<vertex_num; v++)
-                vertex[v]=new int[vertex_neightbourNum[v]];
+        vertex[v]=new int[vertex_neightbourNum[v]];
 	for (e=0; e<edge_num; e++)
 	{
 		v1=edge[e].v1;
