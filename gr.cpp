@@ -157,8 +157,8 @@ void modify_t(int v)
     }
 }
 
-//把顶点c加入候选解
-void addVertex(int c, int locked_add)
+//把顶点c固定(暂时作为候选解)
+void lock_vertex(int c, int locked_add)
 {
     cs[c].locked = 1;
     cs[c].is_in_c = 1;
@@ -259,54 +259,61 @@ void graph_reduce()
         {
             if (cs[i].score == 0)
                 continue;
-            else if (cs[i].score == 1 || cs[i].score == 2)
+            else if (cs[i].score == 1)
             {
-                int score = cs[i].score;//邻居节点修改个数，提前终止for循环
-                if (cs[i].num_in_c == 0)
+                int neighbor_count = vertex_neightbourNum[i];
+                for (size_t j = 0; j < neighbor_count; j++)
                 {
-                    addVertex(i, 1);
+                    int v = vertex[i][j];
+                    if (cs[v].score > 0)
+                    {
+                        lock_vertex(v, 1);
+                        flag = 1;
+                        break;
+                    }
+                }
+            }
+            else if (cs[i].score == 2)
+            {
+                int v_neighbors[2];
+                int neighbor_index = 0;
+                //找到两个未被支配的邻居
+                for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
+                {
+                    int v = vertex[i][j];
+                    if (cs[v].num_in_c == 0)
+                        v_neighbors[neighbor_index++] = v;
+                    if (neighbor_index > 1)
+                        break;
+                }
+                //判断两个邻居直接是否相连，如果是则为三角形结构
+                bool is_neighbours_connected = false;
+                for (size_t j = 0; j < vertex_neightbourNum[v_neighbors[0]]; j++)
+                {
+                    int v = vertex[i][j];
+                    if (v == v_neighbors[1])
+                    {
+                        is_neighbours_connected = true;
+                        break;
+                    }
+                }
+                if (is_neighbours_connected)
+                {
+                    lock_vertex(v_neighbors[0], 1);
                     flag = 1;
                 }
                 else
                 {
-                    int neighbor_count = vertex_neightbourNum[i];
-                    int modify_vertex = 0;
-                    for (size_t j = 0; j < neighbor_count; j++)
-                    {
-                        int v_neighbor = vertex[i][j];
-                        if (cs[v_neighbor].num_in_c == 0)
-                        {
-                            addVertex(v_neighbor, 1);
-                            flag = 1;
-                            //达到终止条件
-                            if (++modify_vertex == score)
-                                break;
-                        }
-                    }
+                    lock_vertex(i, 1);
+                    flag = 1;
                 }
             }
             else
             {
-                //score值大于等于3，把邻居score值最大的节点添加
-                // int v_max_score_index = i;
-                // int v_max_score = cs[i].score;
-                // int neighbor_count = vertex_neightbourNum[i];
-                // for (size_t j = 0; j < neighbor_count; j++)
-                // {
-                //     int v_neighbor = vertex[i][j];
-                //     if (cs[v_neighbor].score > v_max_score)
-                //     {
-                //         v_max_score = cs[v_neighbor].score;
-                //         v_max_score_index = v_neighbor;
-                //     }
-                // }
-                // addVertex(v_max_score_index, 1);
-                // flag = 1;
                 continue;
             }
         }
     };
-    
     print_reduce_graph();
 }
 
@@ -315,18 +322,23 @@ void print_reduce_graph()
     int locked_num = 0;
     int uncover_num = 0;
     int remove_num = 0;
+    int candidate_num = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
         if (cs[i].locked == 1)
             locked_num++;
         if (cs[i].num_in_c == 0)
             uncover_num++;
+        if (cs[i].score == 0)
+            remove_num++;
+        else
+            candidate_num++;
     }
-    remove_num = vertex_num - locked_num - uncover_num;
     cout << "总节点数：" << vertex_num << endl;
+    cout << "候选解数：" << candidate_num << endl;
+    cout << "删除顶点个数：" << remove_num << endl;
     cout << "固定节点数：" << locked_num << endl;
     cout << "未支配个数：" << uncover_num << endl;
-    cout << "删除顶点个数：" << remove_num << endl;
 }
 
 inline int compare(int s1, int c1, int s2, int c2){

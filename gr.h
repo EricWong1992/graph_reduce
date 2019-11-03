@@ -114,8 +114,8 @@ bool getIsDominated(int v);
 bool isCanDominated(int add_v, int target_v);
 //get the score of adding the vertex
 int getScore(int v);
-//add vertex to C
-void addVertex(int c, int locked_add);
+//lock vertex
+void lock_vertex(int c, int locked_add);
 //update vertex score
 void update_score(int v, int cur_level, int total_level);
 /**********api end*********/
