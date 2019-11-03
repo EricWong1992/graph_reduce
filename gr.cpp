@@ -317,6 +317,11 @@ void graph_reduce()
     print_reduce_graph();
 }
 
+void print_cnf()
+{
+    
+}
+
 void print_reduce_graph()
 {
     int locked_num = 0;

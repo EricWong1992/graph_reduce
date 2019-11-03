@@ -102,6 +102,7 @@ long cost_C();
 void update_best_sol();
 int check();
 void graph_reduce();
+void print_cnf();
 void print_reduce_graph();
 /**********api start*********/
 //get the degree of a vertex
