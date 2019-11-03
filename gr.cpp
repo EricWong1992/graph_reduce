@@ -42,7 +42,8 @@ void init_reduce()
             if(cs[i].locked == 0)
             {
                 reduce[i] = 1;
-                cs[v_neighbor].locked = 1;
+                // cs[v_neighbor].locked = 1;
+                lock_vertex(v_neighbor, 1);
             }
         }
         else if(vertex_neightbourNum[i] == 2)
@@ -70,13 +71,15 @@ void init_reduce()
                 {
                     reduce[i] = 1;
                     reduce[a] = 1;
-                    cs[b].locked = 1;
+                    // cs[b].locked = 1;
+                    lock_vertex(b, 1);
                 }
             }
         }
         else if(vertex_neightbourNum[i] == 0)
         {
             cs[i].locked = 1;
+            lock_vertex(i, 1);
         }
         else
         {
@@ -92,7 +95,8 @@ void init_reduce()
                     {
                         reduce[vertex[i][j]] = 1;
                     }
-                cs[i].locked = 1;
+                // cs[i].locked = 1;
+                lock_vertex(i, 1);
             }
         }
     }
@@ -124,6 +128,7 @@ void init_reduce()
                 remain_vertex[remain_num++] = i;
             }
     }
+    graph_reduce();
     //uncover_num = remain_num;
    // printf("%d %d ", vertex_num, remain_num);
 }
@@ -251,69 +256,118 @@ void graph_reduce()
     int flag = 1;       //是否发生操作
     int iter = 0;
     cout << "graph_reduce"<<endl;
-    while (flag == 1)
+    queue<int> q_searchset;
+    for (size_t i = 0; i < vertex_num; i++)
+        if (reduce[i] == 0)
+            q_searchset.push(i);
+    while(!q_searchset.empty())
     {
-        cout << "iter:" << ++iter << endl;;
-        flag = 0;
-        for (size_t i = 0; i < vertex_num; i++)
+        cout << "iter: " << ++iter << endl;
+        cout << "Size of SearchSet: " << q_searchset.size() << endl;
+        int v = q_searchset.front();
+        q_searchset.pop();
+        if (cs[v].score <= 0)
+            continue;
+        int set_count = 1;  //加上自身
+        //存放v闭邻居集合
+        NeighborSet** ns = new NeighborSet*[cs[v].score];
+        ns[0] = new NeighborSet(v);
+        for (size_t j = 0; j < vertex_neightbourNum[v]; j++)
         {
-            if (cs[i].score == 0)
+            int v_neighbor = vertex[v][j];
+            if (cs[v_neighbor].num_in_c == 0)
+                ns[set_count++] = new NeighborSet(v_neighbor);
+        }
+        if (set_count == 1)
+        {
+            //v为孤立点，直接加入
+            lock_vertex(v, 1);
+            flag = 1;
+        }
+        else
+        {
+            //记录score最大的节点
+            int max_score_index = 0;
+            int max_score = cs[v].score;
+            //初始化邻居集合
+            for (size_t i = 0; i < set_count; i++)
+            {
+                int new_v = ns[i]->v;
+                if (cs[new_v].score > max_score)
+                {
+                    max_score = cs[new_v].score;
+                    max_score_index = i;
+                }
+                int index = 1;
+                ns[i]->neighbors[0] = new_v;
+                for (size_t j = 0; j < vertex_neightbourNum[new_v]; j++)
+                {
+                    int new_v_n = vertex[new_v][j];
+                    if (cs[new_v_n].num_in_c == 0)
+                        ns[i]->neighbors[index++] = new_v_n;
+                }
+            }
+            //判断score值最大的节点集合是不是其他集合的超集
+            auto max_set = ns[max_score_index];
+            bool is_super_set = true;
+            for (size_t i = 0; i < set_count; i++)
+            {
+                if (i == max_score_index)
+                    continue;
+                bool is_include = true;
+                int cnt = cs[ns[i]->v].score;
+                for (size_t j = 0; j < cnt; j++)
+                {
+                    int n_v = ns[i]->neighbors[j];
+                    int cnt1 = cs[max_set->v].score;
+                    bool is_find_in_maxset = false;
+                    for (size_t k = 0; k < cnt1; k++)
+                    {
+                        if (n_v == max_set->neighbors[k])
+                        {
+                            is_find_in_maxset = true;
+                            break;
+                        }
+                    }
+                    if (!is_find_in_maxset)
+                    {
+                        //有节点没有被包含在maxset
+                        is_include = false;
+                        break;
+                    }
+                }
+                if (!is_include)
+                {
+                    is_super_set = false;
+                    break;
+                }
+            }
+            if (!is_super_set)
                 continue;
-            else if (cs[i].score == 1)
-            {
-                int neighbor_count = vertex_neightbourNum[i];
-                for (size_t j = 0; j < neighbor_count; j++)
-                {
-                    int v = vertex[i][j];
-                    if (cs[v].score > 0)
-                    {
-                        lock_vertex(v, 1);
-                        flag = 1;
-                        break;
-                    }
-                }
-            }
-            else if (cs[i].score == 2)
-            {
-                int v_neighbors[2];
-                int neighbor_index = 0;
-                //找到两个未被支配的邻居
-                for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
-                {
-                    int v = vertex[i][j];
-                    if (cs[v].num_in_c == 0)
-                        v_neighbors[neighbor_index++] = v;
-                    if (neighbor_index > 1)
-                        break;
-                }
-                //判断两个邻居直接是否相连，如果是则为三角形结构
-                bool is_neighbours_connected = false;
-                for (size_t j = 0; j < vertex_neightbourNum[v_neighbors[0]]; j++)
-                {
-                    int v = vertex[i][j];
-                    if (v == v_neighbors[1])
-                    {
-                        is_neighbours_connected = true;
-                        break;
-                    }
-                }
-                if (is_neighbours_connected)
-                {
-                    lock_vertex(v_neighbors[0], 1);
-                    flag = 1;
-                }
-                else
-                {
-                    lock_vertex(i, 1);
-                    flag = 1;
-                }
-            }
             else
             {
-                continue;
+                lock_vertex(max_set->v, 1);
+                flag = 1;
+                //max_set->v的所有未覆盖的二层邻居都加入队列
+                for (size_t i = 0; i < vertex_neightbourNum[max_set->v]; i++)
+                {
+                    int v_n = vertex[max_set->v][i];
+                    for (size_t j = 0; j < vertex_neightbourNum[v_n]; j++)
+                    {
+                        int v_n_n = vertex[v_n][j];
+                        if (cs[v_n_n].num_in_c == 0)
+                            q_searchset.push(v_n_n);
+                    }
+                }
             }
         }
-    };
+        //释放申请空间
+        for (size_t i = 0; i < set_count; i++)
+        {
+            delete ns[i];
+        }
+    }
+
     print_reduce_graph();
 }
 
@@ -1121,8 +1175,8 @@ int main(int argc, char *argv[]){
 	srand(seed);
 
     init();
-	// init_reduce();
-    graph_reduce();
+	init_reduce();
+    // graph_reduce();
     return 0;
 	/*printf("c %s",argv[1]);
 	printf("p cnf %d %d 201\n", remain_num, remain_num*2);

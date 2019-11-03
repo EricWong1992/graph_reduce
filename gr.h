@@ -13,6 +13,7 @@
 #include <set>
 #include <algorithm>
 #include <utility>
+#include <queue>
 
 using namespace std;
 
@@ -43,6 +44,22 @@ typedef struct Vertex_information{
 }Vertex_information;
 
 Vertex_information *cs;
+
+class NeighborSet
+{
+public:
+	NeighborSet(int _v)
+	{
+		v = _v;
+		neighbors = new int[cs[v].score];
+	}
+	~NeighborSet()
+	{
+		delete neighbors;
+	}
+	int v;
+	int* neighbors;
+};
 
 tms start, finish;
 int start_time;
