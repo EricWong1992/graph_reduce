@@ -1,3 +1,4 @@
+#include <iomanip>
 #include "gr.h"
 
 int bms_thre = 1;
@@ -12,125 +13,142 @@ void buger()
     printf(" *\n");
 }
 
-void init(){
+void init() {
+    std::cout << "initializing.." << endl;
     best_value = LONG_MAX; //取最大值
     cs_size = 0;
     locked_num = 0;
     tabu_list.clear();
     current_sol = 0;
     t_length = 0;
-   //memset(t_index, -1, sizeof(t_index));
-    for(int i = 0; i < vertex_num; i++)
+    uncover_num = 0;
+    //memset(t_index, -1, sizeof(t_index));
+    for (size_t i = 0; i < vertex_num; i++)
     {
         t_index[i] = -1;
+        uncover_vertex_index[i] = i;
+        uncover_vertex[i] = i;
+        uncover_num++;
     }
+}
+
+void simple_lock(int v)
+{
+    if (cs[v].locked == 1)
+        return;
+    //cs[v].locked = 1;
+    lock_vertex(v, 1);
+    //cout << "lock: " << v+1 << endl;
 }
 
 void init_reduce()
 {
-    int i,j,v,kn;
-    int a,b,c,sum;
+    int i, j, v, kn;
+    int a, b, c, sum;
     int v_neighbor, neighbor_num;
     memset(reduce, 0, sizeof(reduce));
-    for(i = 0; i < vertex_num; i++)
+    std::cout << "first step--->: init_reduce" << endl;
+    for (i = 0; i < vertex_num; i++)
     {
-        if(vertex_neightbourNum[i] == 1)
+        if (vertex_neightbourNum[i] == 1)
         {
             v_neighbor = vertex[i][0];
-            //if(cs[i].cost > cs[v_neighbor].cost)
-            //if(vertex_neightbourNum[v_neighbor] > 1)
-            if(cs[i].locked == 0)
+            if (cs[i].locked == 0)
             {
                 reduce[i] = 1;
-                // cs[v_neighbor].locked = 1;
-                lock_vertex(v_neighbor, 1);
+                //cs[v_neighbor].locked = 1;
+                simple_lock(v_neighbor);
             }
         }
-        else if(vertex_neightbourNum[i] == 2)
+        else if (vertex_neightbourNum[i] == 2)
         {
-            if(vertex_neightbourNum[vertex[i][0]] == 2)
+            if (vertex_neightbourNum[vertex[i][0]] == 2)
             {
                 a = vertex[i][0];
                 b = vertex[i][1];
             }
-            else if(vertex_neightbourNum[vertex[i][1]] == 2)
+            else if (vertex_neightbourNum[vertex[i][1]] == 2)
             {
                 a = vertex[i][1];
                 b = vertex[i][0];
             }
             else
                 continue;
-            if(vertex[a][0] == i)
+            if (vertex[a][0] == i)
                 c = vertex[a][1];
             else
                 c = vertex[a][0];
-            if(b == c)
+            if (b == c)
             {
-                if(cs[i].locked == 0 && cs[a].locked == 0)
-                //if(cs[i].cost > cs[b].cost && cs[a].cost > cs[b].cost)
+                if (cs[i].locked == 0 && cs[a].locked == 0)
+                    //if(cs[i].cost > cs[b].cost && cs[a].cost > cs[b].cost)
                 {
                     reduce[i] = 1;
                     reduce[a] = 1;
-                    // cs[b].locked = 1;
-                    lock_vertex(b, 1);
+                    //cs[b].locked = 1;
+                    simple_lock(b);
                 }
             }
         }
-        else if(vertex_neightbourNum[i] == 0)
+        else if (vertex_neightbourNum[i] == 0)
         {
-            cs[i].locked = 1;
-            lock_vertex(i, 1);
+            //cs[i].locked = 1;
+            simple_lock(i);
         }
         else
         {
             neighbor_num = vertex_neightbourNum[i];
             sum = 0;
-            for(j = 0; j < neighbor_num; j++)
-                if(vertex_neightbourNum[vertex[i][j]] == 1)
+            for (j = 0; j < neighbor_num; j++)
+                if (vertex_neightbourNum[vertex[i][j]] == 1)
                     sum += cs[vertex[i][j]].cost;
-            if(sum > cs[i].cost)
+            if (sum > cs[i].cost)
             {
-                for(j = 0; j < neighbor_num; j++)
-                    if(vertex_neightbourNum[vertex[i][j]] == 1)
+                for (j = 0; j < neighbor_num; j++)
+                {
+                    if (vertex_neightbourNum[vertex[i][j]] == 1)
                     {
                         reduce[vertex[i][j]] = 1;
                     }
-                // cs[i].locked = 1;
-                lock_vertex(i, 1);
+                }
+                //cs[i].locked = 1;
+                simple_lock(i);
             }
         }
     }
-    int kkk,k;
+    int kkk, k;
     int lenn;
     remain_num = 0;
-    for(i = 0; i < vertex_num; i++)
+    for (i = 0; i < vertex_num; i++)
     {
-            if(reduce[i])
+        if (reduce[i] == 1)
+        {
+            //cout << "reduce: " << i + 1 << endl;
+            //从图中删除该节点
+            neighbor_num = vertex_neightbourNum[i];
+            for (j = 0; j < neighbor_num; j++)
             {
-                neighbor_num = vertex_neightbourNum[i];
-                for(j = 0; j < neighbor_num; j++)
-                {
-                    v_neighbor = vertex[i][j];
-                    lenn = vertex_neightbourNum[v_neighbor];
-                    for(k = 0; k < lenn; k++)
-                            if(vertex[v_neighbor][k] == i)
-                                    break;
-                    vertex_neightbourNum[v_neighbor]--;
-                    kkk = vertex[v_neighbor][vertex_neightbourNum[v_neighbor]];
-                    vertex[v_neighbor][vertex_neightbourNum[v_neighbor]] = vertex[v_neighbor][k];
-                    vertex[v_neighbor][k] = kkk;
-                }
+                v_neighbor = vertex[i][j];
+                lenn = vertex_neightbourNum[v_neighbor];
+                for (k = 0; k < lenn; k++)
+                    if (vertex[v_neighbor][k] == i)
+                        break;
+                vertex_neightbourNum[v_neighbor]--;
+                kkk = vertex[v_neighbor][vertex_neightbourNum[v_neighbor]];
+                vertex[v_neighbor][vertex_neightbourNum[v_neighbor]] = vertex[v_neighbor][k];
+                vertex[v_neighbor][k] = kkk;
             }
-            else
-            {
-                //uncover_vertex[remain_num] = i;
-                //uncover_vertex_index[i] = remain_num;
-                remain_vertex[remain_num++] = i;
-            }
+        }
+        else
+        {
+            //uncover_vertex[remain_num] = i;
+            //uncover_vertex_index[i] = remain_num;
+            remain_vertex[remain_num++] = i;
+        }
     }
+    uncover_num = remain_num;
+    print_reduce_graph();
     graph_reduce();
-    //uncover_num = remain_num;
-   // printf("%d %d ", vertex_num, remain_num);
 }
 
 //顶点的被支配次数0->1
@@ -178,15 +196,15 @@ void lock_vertex(int c, int locked_add)
         t[t_length] = c;
         t_index[c] = t_length++;
     }
-    if (cs[c].num_in_c == 0)
-        remove_from_uncover(c);
+    //if (cs[c].num_in_c == 0)
+    //	remove_from_uncover(c);
     for (size_t h = 0; h < vertex_neightbourNum[c]; h++)
     {
         int i = vertex[c][h];
-        if (cs[i].num_in_c == 0)
-            remove_from_uncover(i);
+        //if (cs[i].num_in_c == 0)
+        //	remove_from_uncover(i);
         cs[i].num_in_c++;
-        if (cs[c].num_in_c ==0)
+        if (cs[c].num_in_c == 0)
             //i被支配，修改score
             //c 支配次数 0->1
             cs[i].score -= vertex_weight[c];
@@ -252,27 +270,25 @@ void lock_vertex(int c, int locked_add)
 
 void graph_reduce()
 {
-    memset(reduce, 0, sizeof(reduce));
-    int flag = 1;       //是否发生操作
     int iter = 0;
-    cout << "graph_reduce"<<endl;
+    std::cout << "second step--->: super set" << endl;
     queue<int> q_searchset;
     for (size_t i = 0; i < vertex_num; i++)
-        if (reduce[i] == 0)
+        if (cs[i].num_in_c == 0)
             q_searchset.push(i);
-    while(!q_searchset.empty())
+    while (!q_searchset.empty())
     {
-        cout << "iter: " << ++iter << endl;
-        cout << "Size of SearchSet: " << q_searchset.size() << endl;
+        iter++;
         int v = q_searchset.front();
         q_searchset.pop();
         if (cs[v].score <= 0)
             continue;
-        int set_count = 1;  //加上自身
+        int set_count = 0;
         //存放v闭邻居集合
-        NeighborSet** ns = new NeighborSet*[cs[v].score];
-        ns[0] = new NeighborSet(v);
-        for (size_t j = 0; j < vertex_neightbourNum[v]; j++)
+        vector<NeighborSet*> ns(cs[v].score);
+        //加上自身
+        ns[set_count++] = new NeighborSet(v);
+        for (size_t j = 0; j < vertex_neightbourNum[v] && set_count < cs[v].score; j++)
         {
             int v_neighbor = vertex[v][j];
             if (cs[v_neighbor].num_in_c == 0)
@@ -280,9 +296,7 @@ void graph_reduce()
         }
         if (set_count == 1)
         {
-            //v为孤立点，直接加入
             lock_vertex(v, 1);
-            flag = 1;
         }
         else
         {
@@ -300,7 +314,7 @@ void graph_reduce()
                 }
                 int index = 1;
                 ns[i]->neighbors[0] = new_v;
-                for (size_t j = 0; j < vertex_neightbourNum[new_v]; j++)
+                for (size_t j = 0; j < vertex_neightbourNum[new_v] && index < cs[new_v].score; j++)
                 {
                     int new_v_n = vertex[new_v][j];
                     if (cs[new_v_n].num_in_c == 0)
@@ -347,16 +361,19 @@ void graph_reduce()
             else
             {
                 lock_vertex(max_set->v, 1);
-                flag = 1;
                 //max_set->v的所有未覆盖的二层邻居都加入队列
                 for (size_t i = 0; i < vertex_neightbourNum[max_set->v]; i++)
                 {
                     int v_n = vertex[max_set->v][i];
-                    for (size_t j = 0; j < vertex_neightbourNum[v_n]; j++)
+                    int cnt2 = 0;
+                    for (size_t j = 0; j < vertex_neightbourNum[v_n] && cnt2 < cs[v_n].score; j++)
                     {
                         int v_n_n = vertex[v_n][j];
                         if (cs[v_n_n].num_in_c == 0)
+                        {
+                            cnt2++;
                             q_searchset.push(v_n_n);
+                        }
                     }
                 }
             }
@@ -365,15 +382,11 @@ void graph_reduce()
         for (size_t i = 0; i < set_count; i++)
         {
             delete ns[i];
+            ns[i] = nullptr;
         }
     }
-
+    cout << "iter: " << iter << endl;
     print_reduce_graph();
-}
-
-void print_cnf()
-{
-    
 }
 
 void print_reduce_graph()
@@ -393,11 +406,12 @@ void print_reduce_graph()
         else
             candidate_num++;
     }
-    cout << "总节点数：" << vertex_num << endl;
-    cout << "候选解数：" << candidate_num << endl;
-    cout << "删除顶点个数：" << remove_num << endl;
-    cout << "固定节点数：" << locked_num << endl;
-    cout << "未支配个数：" << uncover_num << endl;
+    std::cout << "总节点数：" << vertex_num << endl;
+    std::cout << "候选解数：" << candidate_num << endl;
+    std::cout << "删除顶点个数：" << remove_num << endl;
+    std::cout << "固定节点数：" << locked_num << endl;
+    std::cout << "未支配个数：" << uncover_num << endl;
+    std::cout <<  "压缩比：" <<  fixed << setprecision(2) << remove_num * 1.0 / vertex_num * 100 << "%" << endl;
 }
 
 inline int compare(int s1, int c1, int s2, int c2){
@@ -467,7 +481,8 @@ int check(){ // check if the solution is a correct cover
 }
 
 
-void init_best(){
+void init_best()
+{
     int cnt, kn;
     int i,j,k,l,jj,v;
     int sr, ct;
@@ -515,7 +530,7 @@ void init_best(){
     int sst = 0;
     int uncover_v;
     while(uncover_num>0){
-/*
+        /*
         if(sst % 2000 == 0)
         {
             times(&finish);
@@ -981,82 +996,83 @@ void localsearch(int maxStep){
     int rand_n;
     int init_remove = 0;
 
-for(v = 0; v < vertex_num; v++)
-        uncover_vertex_index[v] = -1;//////////////////////////////////
+    for(v = 0; v < vertex_num; v++)
+            uncover_vertex_index[v] = -1;//////////////////////////////////
 
-while(step<=maxStep){
-    i = -1;
-/*
-    if(step % 100 == 0)
+    while(step<=maxStep)
     {
-                times(&finish);
-                double finish_time = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
-                finish_time = round(finish_time * 100)/100.0;
-                printf(" %ld %ld %f ", current_sol, best_value, finish_time);
-       buger();
-    }
-*/
-    while(uncover_num == 0)
-    {
-
-            if(t_length > 0)
+        i = -1;
+        /*
+            if(step % 100 == 0)
             {
-
-                    rand_n = rand()%t_length;
-                    i = t[rand_n];
+                        times(&finish);
+                        double finish_time = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
+                        finish_time = round(finish_time * 100)/100.0;
+                        printf(" %ld %ld %f ", current_sol, best_value, finish_time);
+            buger();
             }
-            else
-            {
-                    update_best_sol();///////////////////
-                    //i = find_best_in_c_simp(1);
-                    //if(state == 0)
-                        i = find_best_in_c_simp(0);
-                    init_remove = 1;
-            }
-            remove(i, init_remove);
-    }
+        */
+        while(uncover_num == 0)
+        {
 
-     times(&finish);
-     double finish_time = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
-     finish_time = round(finish_time * 100)/100.0;
-     if(finish_time>time_limit) break;
+                if(t_length > 0)
+                {
 
-    init_remove = 1;
-    remove_num1 = i;
- // cout << "r " << i;
-    //memset(uncover_vertex_index, -1, sizeof(uncover_vertex_index));
-    uncover_length = 0;
+                        rand_n = rand()%t_length;
+                        i = t[rand_n];
+                }
+                else
+                {
+                        update_best_sol();///////////////////
+                        //i = find_best_in_c_simp(1);
+                        //if(state == 0)
+                            i = find_best_in_c_simp(0);
+                        init_remove = 1;
+                }
+                remove(i, init_remove);
+        }
 
-    uncover_vertex[uncover_length] = remove_num1;
-    uncover_vertex_index[remove_num1] = uncover_length;
-    uncover_length++;
+        times(&finish);
+        double finish_time = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
+        finish_time = round(finish_time * 100)/100.0;
+        if(finish_time>time_limit) break;
 
-    h = vertex_neightbourNum[remove_num1];
-    for(v = 0; v < h;v++)
-    {
-            i = vertex[remove_num1][v];
-            if(cs[i].is_in_c == 1)
-                continue;
-            if(cs[i].is_in_c == 0 && uncover_vertex_index[i] == -1)
-            {
-                    uncover_vertex[uncover_length] = i;
-                    uncover_vertex_index[i] = uncover_length;
-                    uncover_length++;
-            }
-            k = vertex_neightbourNum[i];
-            for(j = 0; j < k; j++)
-            {
-                    c = vertex[i][j];
-                    if(c == remove_num1)
-                        continue;
-                    if(cs[c].is_in_c == 0 && uncover_vertex_index[c] == -1)
-                    {
-                            uncover_vertex[uncover_length] = c;
-                            uncover_vertex_index[c] = uncover_length;
-                            uncover_length++;
-                    }
-            }
-    }
+        init_remove = 1;
+        remove_num1 = i;
+        // cout << "r " << i;
+        //memset(uncover_vertex_index, -1, sizeof(uncover_vertex_index));
+        uncover_length = 0;
+
+        uncover_vertex[uncover_length] = remove_num1;
+        uncover_vertex_index[remove_num1] = uncover_length;
+        uncover_length++;
+
+        h = vertex_neightbourNum[remove_num1];
+        for(v = 0; v < h;v++)
+        {
+                i = vertex[remove_num1][v];
+                if(cs[i].is_in_c == 1)
+                    continue;
+                if(cs[i].is_in_c == 0 && uncover_vertex_index[i] == -1)
+                {
+                        uncover_vertex[uncover_length] = i;
+                        uncover_vertex_index[i] = uncover_length;
+                        uncover_length++;
+                }
+                k = vertex_neightbourNum[i];
+                for(j = 0; j < k; j++)
+                {
+                        c = vertex[i][j];
+                        if(c == remove_num1)
+                            continue;
+                        if(cs[c].is_in_c == 0 && uncover_vertex_index[c] == -1)
+                        {
+                                uncover_vertex[uncover_length] = c;
+                                uncover_vertex_index[c] = uncover_length;
+                                uncover_length++;
+                        }
+                }
+        }
 
         best_in_c=find_best_in_c(1);
         if(state==0)best_in_c=find_best_in_c(0);
@@ -1098,9 +1114,9 @@ while(step<=maxStep){
                         }
                 }
         }
-        //cout << "a";
-        while(uncover_num>0){
-
+            //cout << "a";
+        while(uncover_num>0)
+        {
                 int sr=INT_MIN, ct;
                 maxc=-1;
 
@@ -1125,18 +1141,18 @@ while(step<=maxStep){
                         tabu_list.insert(maxc);
                         cs[maxc].time_stamp = step;
                         uncov_r_weight_inc();
-           //cout <<" " <<maxc ;
+            //cout <<" " <<maxc ;
         }
-        //buger();
+            //buger();
         for(v = 0; v < uncover_length; v++)
                 uncover_vertex_index[uncover_vertex[v]] = -1;
 
-        //update_best_sol();
+            //update_best_sol();
         step++;
-	each_iter++;
-	bms_thre = bms_thre*2;
-	if(bms_thre >cs_size)bms_thre-=cs_size;
-        if(step>=total_step) break;
+        each_iter++;
+        bms_thre = bms_thre*2;
+        if(bms_thre >cs_size)bms_thre-=cs_size;
+            if(step>=total_step) break;
     }
 }
 
