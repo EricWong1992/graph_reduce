@@ -47,6 +47,7 @@ void init_reduce()
     int a, b, c, sum;
     int v_neighbor, neighbor_num;
     memset(reduce, 0, sizeof(reduce));
+    times(&start);
     std::cout << "first step--->: init_reduce" << endl;
     for (i = 0; i < vertex_num; i++)
     {
@@ -278,6 +279,11 @@ void graph_reduce()
             q_searchset.push(i);
     while (!q_searchset.empty())
     {
+        times(&finish);
+        double t = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
+        t = round(t * 100)/100.0;
+        if (t > time_limit)
+            break;
         iter++;
         int v = q_searchset.front();
         q_searchset.pop();
@@ -387,6 +393,10 @@ void graph_reduce()
     }
     cout << "iter: " << iter << endl;
     print_reduce_graph();
+    times(&finish);
+    double t = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
+    t = round(t * 100)/100.0;
+    cout << "耗时：" << t << "s" <<endl;
 }
 
 void print_reduce_graph()
@@ -408,7 +418,7 @@ void print_reduce_graph()
     }
     std::cout << "总节点数：" << vertex_num << endl;
     std::cout << "候选解数：" << candidate_num << endl;
-    std::cout << "删除顶点个数：" << remove_num << endl;
+    std::cout << "删除节点个数：" << remove_num << endl;
     std::cout << "固定节点数：" << locked_num << endl;
     std::cout << "未支配个数：" << uncover_num << endl;
     std::cout <<  "压缩比：" <<  fixed << setprecision(2) << remove_num * 1.0 / vertex_num * 100 << "%" << endl;
@@ -464,7 +474,7 @@ int check(){ // check if the solution is a correct cover
         j = v;
         if(best_sol[j]==0 && cs[j].locked == 1)
             return 0;
-        if(best_sol[j]==0) 
+        if(best_sol[j]==0)
             continue;
         reduce[j]=1;
         for(k=0;k<vertex_neightbourNum_bak[j];k++)
@@ -474,7 +484,7 @@ int check(){ // check if the solution is a correct cover
     }
     for(v=0;v<vertex_num;v++){
         i = v;
-        if(!reduce[i]) 
+        if(!reduce[i])
             return 0;
     }
     return 1;

@@ -47,7 +47,7 @@ Vertex_information *cs;
 class NeighborSet
 {
 public:
-	NeighborSet(int _v)
+	explicit NeighborSet(int _v)
 	{
 		v = _v;
 		neighbors = new int[cs[v].score];
