@@ -50,15 +50,25 @@ public:
     explicit NeighborSet(int _v)
     {
         v = _v;
-        neighbors = new int[cs[v].score];
+        neighbor_cnt = cs[v].score;
+        neighbors = new int[neighbor_cnt];
     }
     ~NeighborSet()
     {
         delete neighbors;
         neighbors = nullptr;
     }
+    bool is_in_set(int _v)
+    {
+        for (int i = 0; i < neighbor_cnt; ++i) {
+            if (neighbors[i] == _v)
+                return true;
+        }
+        return false;
+    }
     int v;
     int* neighbors;
+    int neighbor_cnt;
 };
 
 tms start, finish;

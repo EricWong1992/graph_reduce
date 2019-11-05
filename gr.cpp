@@ -279,6 +279,7 @@ void graph_reduce()
             q_searchset.push(i);
     while (!q_searchset.empty())
     {
+        //时间计算
         times(&finish);
         double t = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
         t = round(t * 100)/100.0;
@@ -291,106 +292,88 @@ void graph_reduce()
             continue;
         int set_count = 0;
         //存放v闭邻居集合
-        vector<NeighborSet*> ns(cs[v].score);
-        //加上自身
-        ns[set_count++] = new NeighborSet(v);
-        for (size_t j = 0; j < vertex_neightbourNum[v] && set_count < cs[v].score; j++)
-        {
+        vector<int> node(cs[v].score);
+        vector<int> node_score(cs[v].score);
+        node[set_count] = v;
+        node_score[set_count++] = cs[v].score;
+        for (int j = 0; j < vertex_neightbourNum[v] && set_count < cs[v].score; ++j) {
             int v_neighbor = vertex[v][j];
             if (cs[v_neighbor].num_in_c == 0)
-                ns[set_count++] = new NeighborSet(v_neighbor);
+            {
+                node[set_count] = v_neighbor;
+                node_score[set_count] = cs[v_neighbor].score;
+                ++set_count;
+            }
         }
         if (set_count == 1)
-        {
             lock_vertex(v, 1);
-        }
         else
         {
-            //记录score最大的节点
+            //寻找score最大的节点
             int max_score_index = 0;
-            int max_score = cs[v].score;
-            //初始化邻居集合
-            for (size_t i = 0; i < set_count; i++)
-            {
-                int new_v = ns[i]->v;
-                if (cs[new_v].score > max_score)
+            int max_score = node_score[0];
+            for (int i = 1; i < set_count; ++i) {
+                if (node_score[i] > max_score)
                 {
-                    max_score = cs[new_v].score;
+                    max_score = node_score[i];
                     max_score_index = i;
                 }
-                int index = 1;
-                ns[i]->neighbors[0] = new_v;
-                for (size_t j = 0; j < vertex_neightbourNum[new_v] && index < cs[new_v].score; j++)
-                {
-                    int new_v_n = vertex[new_v][j];
-                    if (cs[new_v_n].num_in_c == 0)
-                        ns[i]->neighbors[index++] = new_v_n;
-                }
             }
-            //判断score值最大的节点集合是不是其他集合的超集
-            auto max_set = ns[max_score_index];
-            bool is_super_set = true;
-            for (size_t i = 0; i < set_count; i++)
+            int max_score_v = node[max_score_index];
+            auto max_set = new NeighborSet(max_score_v);
+            int cnt = 0;
+            //初始化超集候选集合元素
+            max_set->neighbors[cnt++] = max_score_v;
+            for (int i = 0; i < vertex_neightbourNum[max_score_v] && cnt < max_score; ++i)
             {
-                if (i == max_score_index)
+                int v_neighbor = vertex[max_score_v][i];
+                if (cs[v_neighbor].num_in_c == 0)
+                    max_set->neighbors[cnt++] = v_neighbor;
+            }
+            //判断score值最大的集合是不是其他集合的超集
+            bool is_super_set = true;
+            for (int i = 0; i < set_count; ++i) {
+                if (node[i] == max_score_v)
                     continue;
-                bool is_include = true;
-                int cnt = cs[ns[i]->v].score;
-                for (size_t j = 0; j < cnt; j++)
-                {
-                    int n_v = ns[i]->neighbors[j];
-                    int cnt1 = cs[max_set->v].score;
-                    bool is_find_in_maxset = false;
-                    for (size_t k = 0; k < cnt1; k++)
-                    {
-                        if (n_v == max_set->neighbors[k])
-                        {
-                            is_find_in_maxset = true;
-                            break;
-                        }
-                    }
-                    if (!is_find_in_maxset)
-                    {
-                        //有节点没有被包含在maxset
-                        is_include = false;
-                        break;
-                    }
-                }
-                if (!is_include)
-                {
+                int v_neighbor = node[i];
+                int v_neighbor_score = node_score[i];
+                if (!max_set->is_in_set(v_neighbor)) {
                     is_super_set = false;
                     break;
                 }
-            }
-            if (!is_super_set)
-                continue;
-            else
-            {
-                lock_vertex(max_set->v, 1);
-                //max_set->v的所有未覆盖的二层邻居都加入队列
-                for (size_t i = 0; i < vertex_neightbourNum[max_set->v]; i++)
-                {
-                    int v_n = vertex[max_set->v][i];
-                    int cnt2 = 0;
-                    for (size_t j = 0; j < vertex_neightbourNum[v_n] && cnt2 < cs[v_n].score; j++)
-                    {
-                        int v_n_n = vertex[v_n][j];
-                        if (cs[v_n_n].num_in_c == 0)
-                        {
-                            cnt2++;
-                            q_searchset.push(v_n_n);
+                cnt = 1;
+                for (int j = 0; j < vertex_neightbourNum[v_neighbor] && cnt < v_neighbor_score; ++j) {
+                    int v_neighbor_neighbor = vertex[v_neighbor][j];
+                    if (cs[v_neighbor_neighbor].num_in_c == 0) {
+                        if (max_set->is_in_set(v_neighbor_neighbor)) {
+                            cnt++;
+                            continue;
+                        } else {
+                            is_super_set = false; //不是超集，跳出循环
+                            break;
+                        }
+                    }
+                }
+                if (!is_super_set)
+                    break;
+                else {
+                    lock_vertex(max_set->v, 1);
+                    //max_set->v的所有未覆盖的二层邻居都加入队列
+                    for (size_t i = 0; i < vertex_neightbourNum[max_set->v]; i++) {
+                        int v_n = vertex[max_set->v][i];
+                        int cnt2 = 0;
+                        for (size_t j = 0; j < vertex_neightbourNum[v_n] && cnt2 < cs[v_n].score; j++) {
+                            int v_n_n = vertex[v_n][j];
+                            if (cs[v_n_n].num_in_c == 0) {
+                                cnt2++;
+                                q_searchset.push(v_n_n);
+                            }
                         }
                     }
                 }
             }
+            delete max_set;
         }
-        //释放申请空间
-        for (size_t i = 0; i < set_count; i++)
-        {
-            delete ns[i];
-            ns[i] = nullptr;
-        }
-    }
     cout << "iter: " << iter << endl;
     print_reduce_graph();
     times(&finish);
