@@ -530,11 +530,11 @@ void init_best()
             uncover_num++;
         }
     }
-   //
-   //wcnf
-   //
-   //printf("%d  ", vertex_num - uncover_num);
-   //printf("\n");
+    //
+    //wcnf
+    //
+    //printf("%d  ", vertex_num - uncover_num);
+    //printf("\n");
     free_all();
     // exit(0);
     int sst = 0;
@@ -563,12 +563,12 @@ void init_best()
             //if(cs[j].num_in_c > 0) continue;
             k=compare(sr,ct,cs[j].score, cs[j].cost);
             if(sr==INT_MIN||k<0){
-	sr=cs[j].score;
-	ct=cs[j].cost;
-	best_array[0]=j;
-	cnt=1;
+                sr=cs[j].score;
+                ct=cs[j].cost;
+                best_array[0]=j;
+                cnt=1;
             } else if(k==0){
-	best_array[cnt++]=j;
+                best_array[cnt++]=j;
             }
         }
         if(cnt>0){
@@ -576,9 +576,9 @@ void init_best()
             add(best_array[l], 1, 0);
         }
     }
-        update_best_sol();
-        if(check()==0){
-            printf("initial wrong\n");exit(0);
+    update_best_sol();
+    if(check()==0){
+        printf("initial wrong\n");exit(0);
     }
     printf("%ld	%.2f	", best_value, real_time);
 }
@@ -629,7 +629,7 @@ void add(int c, int locked_add, int init_add){
                 uncover_vertex[uk] = ck;
                 uncover_vertex_index[ck] = uk;
             }
-    }
+        }
 
         cs[i].num_in_c++;/////////////////////
         cnt=0;
@@ -642,9 +642,93 @@ void add(int c, int locked_add, int init_add){
 
         if(cs[i].is_in_c && init_add == 0)
         {
-        if(cs[i].num_in_c == 2)
+            if(cs[i].num_in_c == 2)
                 cs[i].score += vertex_weight[i];
-        if(cs[i].score == 0 && t_index[i] == -1 && cs[i].locked == 0)
+            if(cs[i].score == 0 && t_index[i] == -1 && cs[i].locked == 0)
+            {
+                t[t_length] = i;
+                t_index[i] = t_length;
+                t_length++;
+            }
+            else if(t_index[i] != -1 && cs[i].score != 0)
+            {
+                t_length--;
+                uk = t_index[i];
+                ck = t[t_length];
+                t[uk] = ck;
+                t_index[ck] = uk;
+                t_index[i] = -1;
+            }
+            continue;
+        }
+
+
+        cs[i].config = 1;
+        //if(init_add == 0)
+        //cs[i].config = 2;
+        for(l=0;l<vertex_neightbourNum[i];l++)
+        {//因为这个变量，变成这个集合的邻居集合
+            j=vertex[i][l];
+
+            if(j==c) continue;
+            if(cs[j].is_in_c)
+            {
+                s=j;
+                cnt++;
+            }
+            //if(rand()%100 < 50)
+            //if(init_add == 1)
+            cs[j].config = 2;
+        }
+        if(cs[i].is_in_c)
+        {
+            s=i;
+            cnt++;
+        }
+
+        if(cnt==0){ // c is the first one covering this row in C
+            cs[i].score-=vertex_weight[i];////////////////
+            for(l=0; l<vertex_neightbourNum[i]; l++){
+                j=vertex[i][l];
+                if(j==c)
+                    continue;
+                cs[j].score-=vertex_weight[i];//候选解中不覆盖这个变量，所以当覆盖之后，所以以前覆盖这个变量的集合score取值必须减去这个变量
+                if(cs[j].score == 0 && cs[j].is_in_c == 1 && t_index[j] == -1 && cs[j].locked == 0)
+                {
+                    t[t_length] = j;
+                    t_index[j] = t_length;
+                    t_length++;
+                }
+                else if(t_index[j] != -1 && cs[j].score != 0)
+                {
+                    t_length--;
+                    uk = t_index[j];
+                    ck = t[t_length];
+                    t[uk] = ck;
+                    t_index[ck] = uk;
+                    t_index[j] = -1;
+                }
+            }
+        } else if(cnt==1){// c is second one covering this row in C
+            cs[s].score+=vertex_weight[i];//候选解中覆盖这个变量一次，所以加入这个集合以后，所以以前覆盖这个变量的集合score取值必须加上这个变量
+            if(cs[s].score == 0 && cs[s].is_in_c == 1 && t_index[s] == -1 && cs[s].locked == 0)
+            {
+                t[t_length] = s;
+                t_index[s] = t_length;
+                t_length++;
+            }
+            else if(t_index[s] != -1 && cs[s].score != 0)
+            {
+                t_length--;
+                uk = t_index[s];
+                ck = t[t_length];
+                t[uk] = ck;
+                t_index[ck] = uk;
+                t_index[s] = -1;
+            }
+        }
+
+        if(cs[i].score == 0 && cs[i].is_in_c == 1 && t_index[i] == -1 && cs[i].locked == 0)
         {
             t[t_length] = i;
             t_index[i] = t_length;
@@ -659,92 +743,8 @@ void add(int c, int locked_add, int init_add){
             t_index[ck] = uk;
             t_index[i] = -1;
         }
-        continue;
-        }
-
-
-    cs[i].config = 1;
-     //if(init_add == 0)
-                //cs[i].config = 2;
-    for(l=0;l<vertex_neightbourNum[i];l++)
-    {//因为这个变量，变成这个集合的邻居集合
-        j=vertex[i][l];
-
-        if(j==c) continue;
-        if(cs[j].is_in_c)
-        {
-            s=j;
-            cnt++;
-        }
-        //if(rand()%100 < 50)
-        //if(init_add == 1)
-        cs[j].config = 2;
     }
-    if(cs[i].is_in_c)
-    {
-        s=i;
-        cnt++;
-    }
-
-        if(cnt==0){ // c is the first one covering this row in C
-                cs[i].score-=vertex_weight[i];////////////////
-                for(l=0; l<vertex_neightbourNum[i]; l++){
-                        j=vertex[i][l];
-                        if(j==c)
-                                continue;
-                        cs[j].score-=vertex_weight[i];//候选解中不覆盖这个变量，所以当覆盖之后，所以以前覆盖这个变量的集合score取值必须减去这个变量
-                        if(cs[j].score == 0 && cs[j].is_in_c == 1 && t_index[j] == -1 && cs[j].locked == 0)
-                        {
-                                t[t_length] = j;
-                                t_index[j] = t_length;
-                                t_length++;
-                        }
-                        else if(t_index[j] != -1 && cs[j].score != 0)
-                        {
-                                t_length--;
-                                uk = t_index[j];
-                                ck = t[t_length];
-                                t[uk] = ck;
-                                t_index[ck] = uk;
-                                t_index[j] = -1;
-                        }
-                }
-        } else if(cnt==1){// c is second one covering this row in C
-                cs[s].score+=vertex_weight[i];//候选解中覆盖这个变量一次，所以加入这个集合以后，所以以前覆盖这个变量的集合score取值必须加上这个变量
-                if(cs[s].score == 0 && cs[s].is_in_c == 1 && t_index[s] == -1 && cs[s].locked == 0)
-                {
-                        t[t_length] = s;
-                        t_index[s] = t_length;
-                        t_length++;
-                }
-                else if(t_index[s] != -1 && cs[s].score != 0)
-                {
-                        t_length--;
-                        uk = t_index[s];
-                        ck = t[t_length];
-                        t[uk] = ck;
-                        t_index[ck] = uk;
-                        t_index[s] = -1;
-                }
-        }
-
-        if(cs[i].score == 0 && cs[i].is_in_c == 1 && t_index[i] == -1 && cs[i].locked == 0)
-        {
-                t[t_length] = i;
-                t_index[i] = t_length;
-                t_length++;
-        }
-        else if(t_index[i] != -1 && cs[i].score != 0)
-        {
-                t_length--;
-                uk = t_index[i];
-                ck = t[t_length];
-                t[uk] = ck;
-                t_index[ck] = uk;
-                t_index[i] = -1;
-        }
-    }
-        cs[c].num_in_c++;
+    cs[c].num_in_c++;
 }
 
 void remove(int c, int init_remove){
@@ -760,21 +760,21 @@ void remove(int c, int init_remove){
     cs[c].score=-cs[c].score;
     if(cs[c].score == 0 && t_index[c] != -1)
     {
-            t_length--;
-            uk = t_index[c];
-            ck = t[t_length];
-            t[uk] = ck;
-            t_index[ck] = uk;
-            t_index[c] = -1;
+        t_length--;
+        uk = t_index[c];
+        ck = t[t_length];
+        t[uk] = ck;
+        t_index[ck] = uk;
+        t_index[c] = -1;
     }
     //if(init_remove == 1)
-                cs[c].config=0;
+    cs[c].config=0;
 
     if( cs[c].num_in_c==1)
     {
-            //uncover_vertex[uncover_num] = c;//////////////////////////
-     // uncover_vertex_index[c] = uncover_num;
-            uncover_num++;
+        //uncover_vertex[uncover_num] = c;//////////////////////////
+        // uncover_vertex_index[c] = uncover_num;
+        uncover_num++;
     }
 
     int i,j,k,cnt,s,h,l;
@@ -789,7 +789,7 @@ void remove(int c, int init_remove){
         }
         cs[i].num_in_c--;
         cnt=0;
-     if( cs[c].num_in_c==2&& cs[i].is_in_c==1){
+        if( cs[c].num_in_c==2&& cs[i].is_in_c==1){
             cs[i].score-=vertex_weight[c];
         }    else if( cs[c].num_in_c==1){
             cs[i].score+=vertex_weight[c];
@@ -798,100 +798,100 @@ void remove(int c, int init_remove){
 
         if(cs[i].is_in_c && init_remove == 0)
         {
-                if(cs[i].num_in_c == 1)
-                        cs[i].score -= vertex_weight[i];
-                if(cs[i].score == 0 && t_index[i] == -1 && cs[i].locked == 0)
-                {
-                        t[t_length] = i;
-                        t_index[i] = t_length;
-                        t_length++;
-                }
-                else if(t_index[i] != -1 && cs[i].score != 0)
-                {
-                        t_length--;
-                        uk = t_index[i];
-                        ck = t[t_length];
-                        t[uk] = ck;
-                        t_index[ck] = uk;
-                        t_index[i] = -1;
-                }
-                continue;
-        }
-        //if(init_remove == 1)
-     cs[i].config = 2;
-        for(l=0;l<vertex_neightbourNum[i];l++){
-            j=vertex[i][l];
-            if(j==c) continue;
-            if(cs[j].is_in_c){
-	cnt++;
-	s=j;
-            }
-                //if(rand()%100 < 50)
-                //if(init_remove == 1)
-         cs[j].config=2;
-        }
-        if(cs[i].is_in_c){
-	s=i;
-	cnt++;
-            }
-        if(cnt==0){
-                cs[i].score+=vertex_weight[i];////////////////
-                for(l=0;l<vertex_neightbourNum[i];l++){
-                        j=vertex[i][l];
-                        if(j==c)
-                                continue;
-                        cs[j].score+=vertex_weight[i];
-                        if(cs[j].score == 0 && cs[j].is_in_c == 1 && t_index[j] == -1 && cs[j].locked == 0)
-                        {
-                                t[t_length] = j;
-                                t_index[j] = t_length;
-                                t_length++;
-                        }
-                        else if(t_index[j] != -1 && cs[j].score != 0)
-                        {
-                                t_length--;
-                                uk = t_index[j];
-                                ck = t[t_length];
-                                t[uk] = ck;
-                                t_index[ck] = uk;
-                                t_index[j] = -1;
-                        }
-                }
-        } else if(cnt==1){
-                cs[s].score-=vertex_weight[i];
-                if(cs[s].score == 0 && cs[s].is_in_c == 1 && t_index[s] == -1 && cs[s].locked == 0)
-                {
-                        t[t_length] = s;
-                        t_index[s] = t_length;
-                        t_length++;
-                }
-                else if(t_index[s] != -1 && cs[s].score != 0)
-                {
-                        t_length--;
-                        uk = t_index[s];
-                        ck = t[t_length];
-                        t[uk] = ck;
-                        t_index[ck] = uk;
-                        t_index[s] = -1;
-                }
-        }
-        if(cs[i].score == 0 && cs[i].is_in_c == 1 && t_index[i] == -1 && cs[i].locked == 0)
-        {
+            if(cs[i].num_in_c == 1)
+                cs[i].score -= vertex_weight[i];
+            if(cs[i].score == 0 && t_index[i] == -1 && cs[i].locked == 0)
+            {
                 t[t_length] = i;
                 t_index[i] = t_length;
                 t_length++;
-        }
-        else if(t_index[i] != -1 && cs[i].score != 0)
-        {
+            }
+            else if(t_index[i] != -1 && cs[i].score != 0)
+            {
                 t_length--;
                 uk = t_index[i];
                 ck = t[t_length];
                 t[uk] = ck;
                 t_index[ck] = uk;
                 t_index[i] = -1;
+            }
+            continue;
+        }
+        //if(init_remove == 1)
+        cs[i].config = 2;
+        for(l=0;l<vertex_neightbourNum[i];l++){
+            j=vertex[i][l];
+            if(j==c) continue;
+            if(cs[j].is_in_c){
+                cnt++;
+                s=j;
+            }
+            //if(rand()%100 < 50)
+            //if(init_remove == 1)
+            cs[j].config=2;
+        }
+        if(cs[i].is_in_c){
+            s=i;
+            cnt++;
+        }
+        if(cnt==0){
+            cs[i].score+=vertex_weight[i];////////////////
+            for(l=0;l<vertex_neightbourNum[i];l++){
+                j=vertex[i][l];
+                if(j==c)
+                    continue;
+                cs[j].score+=vertex_weight[i];
+                if(cs[j].score == 0 && cs[j].is_in_c == 1 && t_index[j] == -1 && cs[j].locked == 0)
+                {
+                    t[t_length] = j;
+                    t_index[j] = t_length;
+                    t_length++;
+                }
+                else if(t_index[j] != -1 && cs[j].score != 0)
+                {
+                    t_length--;
+                    uk = t_index[j];
+                    ck = t[t_length];
+                    t[uk] = ck;
+                    t_index[ck] = uk;
+                    t_index[j] = -1;
+                }
+            }
+        } else if(cnt==1){
+            cs[s].score-=vertex_weight[i];
+            if(cs[s].score == 0 && cs[s].is_in_c == 1 && t_index[s] == -1 && cs[s].locked == 0)
+            {
+                t[t_length] = s;
+                t_index[s] = t_length;
+                t_length++;
+            }
+            else if(t_index[s] != -1 && cs[s].score != 0)
+            {
+                t_length--;
+                uk = t_index[s];
+                ck = t[t_length];
+                t[uk] = ck;
+                t_index[ck] = uk;
+                t_index[s] = -1;
+            }
+        }
+        if(cs[i].score == 0 && cs[i].is_in_c == 1 && t_index[i] == -1 && cs[i].locked == 0)
+        {
+            t[t_length] = i;
+            t_index[i] = t_length;
+            t_length++;
+        }
+        else if(t_index[i] != -1 && cs[i].score != 0)
+        {
+            t_length--;
+            uk = t_index[i];
+            ck = t[t_length];
+            t[uk] = ck;
+            t_index[ck] = uk;
+            t_index[i] = -1;
         }
     }
-        cs[c].num_in_c--;
+    cs[c].num_in_c--;
 
 }
 
@@ -907,23 +907,23 @@ int find_best_in_c_simp(int allowTabu){
     int kn = cs_size;
     state = 0;
     for(v=0;v<kn;v++){
-                i = v;
-                i = cs_vertex[i];
-                if(allowTabu&&in_tabu(i))
-                        continue;
-                state = 1;
-                k=compare(sr,ct, cs[i].score, cs[i].cost);
-                if(sr==INT_MIN||k<0){
-                        sr=cs[i].score;
-                        ct=cs[i].cost;
-                        //maxc=i;
-                        maxc=i;
-                } else if(k==0){
-                if(cs[maxc].time_stamp>cs[i].time_stamp){
-                        //maxc=i;
-                        maxc=i;
-                }
-                }
+        i = v;
+        i = cs_vertex[i];
+        if(allowTabu&&in_tabu(i))
+            continue;
+        state = 1;
+        k=compare(sr,ct, cs[i].score, cs[i].cost);
+        if(sr==INT_MIN||k<0){
+            sr=cs[i].score;
+            ct=cs[i].cost;
+            //maxc=i;
+            maxc=i;
+        } else if(k==0){
+            if(cs[maxc].time_stamp>cs[i].time_stamp){
+                //maxc=i;
+                maxc=i;
+            }
+        }
     }
     return maxc;
 }
@@ -939,42 +939,42 @@ int find_best_in_c(int allowTabu){
     double p = exp(-each_iter);
     if(r_n < p)
     {
-                //kn = cs_size;
-                //bms = INT_MAX;
-                kn = 1024;
+        //kn = cs_size;
+        //bms = INT_MAX;
+        kn = 1024;
     }
     else
     {
-                /*bms = 100;
-                temp_int = bms_thre % cs_size;
-                if(bms < temp_int)
-                        bms = temp_int;
-                kn = cs_size;
-                if(kn > bms)
-                                kn = bms;*/
-                kn = 50 + rand()%10;
+        /*bms = 100;
+        temp_int = bms_thre % cs_size;
+        if(bms < temp_int)
+                bms = temp_int;
+        kn = cs_size;
+        if(kn > bms)
+                        kn = bms;*/
+        kn = 50 + rand()%10;
     }
-                if(kn > cs_size)
-                        kn = cs_size;
-                for(v=0;v<kn;v++){
-                        if(cs_size == kn)
-                                i = v;
-                        else
-                                i = rand()%cs_size;
-                        i = cs_vertex[i];
-                        if(allowTabu&&in_tabu(i)) continue;
-                        state=1;
-                        k=compare(sr,ct, cs[i].score, cs[i].cost);
-                        if(sr==INT_MIN||k<0){
-                                sr=cs[i].score;
-                                ct=cs[i].cost;
-                                maxc=i;
-                        } else if(k==0){
-                                        if(cs[maxc].time_stamp>cs[i].time_stamp){
-                                                maxc=i;
-                                        }
-                        }
-                }
+    if(kn > cs_size)
+        kn = cs_size;
+    for(v=0;v<kn;v++){
+        if(cs_size == kn)
+            i = v;
+        else
+            i = rand()%cs_size;
+        i = cs_vertex[i];
+        if(allowTabu&&in_tabu(i)) continue;
+        state=1;
+        k=compare(sr,ct, cs[i].score, cs[i].cost);
+        if(sr==INT_MIN||k<0){
+            sr=cs[i].score;
+            ct=cs[i].cost;
+            maxc=i;
+        } else if(k==0){
+            if(cs[maxc].time_stamp>cs[i].time_stamp){
+                maxc=i;
+            }
+        }
+    }
     return maxc;
 }
 
@@ -982,18 +982,18 @@ void uncov_r_weight_inc(){
     int i,j,h,v,nn;
     for(v = 0; v < uncover_length; v++)
     {
-            i = uncover_vertex[v];
-            if(cs[i].num_in_c == 0)
+        i = uncover_vertex[v];
+        if(cs[i].num_in_c == 0)
+        {
+            vertex_weight[i] += 1;
+            cs[i].score += 1;
+            nn = vertex_neightbourNum[i];
+            for(h = 0; h < nn; h++)
             {
-                    vertex_weight[i] += 1;
-                    cs[i].score += 1;
-                    nn = vertex_neightbourNum[i];
-                    for(h = 0; h < nn; h++)
-                    {
-                            j = vertex[i][h];
-                            cs[j].score += 1;
-                    }
+                j = vertex[i][h];
+                cs[j].score += 1;
             }
+        }
     }
 }
 
@@ -1007,7 +1007,7 @@ void localsearch(int maxStep){
     int init_remove = 0;
 
     for(v = 0; v < vertex_num; v++)
-            uncover_vertex_index[v] = -1;//////////////////////////////////
+        uncover_vertex_index[v] = -1;//////////////////////////////////
 
     while(step<=maxStep)
     {
@@ -1025,21 +1025,21 @@ void localsearch(int maxStep){
         while(uncover_num == 0)
         {
 
-                if(t_length > 0)
-                {
+            if(t_length > 0)
+            {
 
-                        rand_n = rand()%t_length;
-                        i = t[rand_n];
-                }
-                else
-                {
-                        update_best_sol();///////////////////
-                        //i = find_best_in_c_simp(1);
-                        //if(state == 0)
-                            i = find_best_in_c_simp(0);
-                        init_remove = 1;
-                }
-                remove(i, init_remove);
+                rand_n = rand()%t_length;
+                i = t[rand_n];
+            }
+            else
+            {
+                update_best_sol();///////////////////
+                //i = find_best_in_c_simp(1);
+                //if(state == 0)
+                i = find_best_in_c_simp(0);
+                init_remove = 1;
+            }
+            remove(i, init_remove);
         }
 
         times(&finish);
@@ -1060,28 +1060,28 @@ void localsearch(int maxStep){
         h = vertex_neightbourNum[remove_num1];
         for(v = 0; v < h;v++)
         {
-                i = vertex[remove_num1][v];
-                if(cs[i].is_in_c == 1)
+            i = vertex[remove_num1][v];
+            if(cs[i].is_in_c == 1)
+                continue;
+            if(cs[i].is_in_c == 0 && uncover_vertex_index[i] == -1)
+            {
+                uncover_vertex[uncover_length] = i;
+                uncover_vertex_index[i] = uncover_length;
+                uncover_length++;
+            }
+            k = vertex_neightbourNum[i];
+            for(j = 0; j < k; j++)
+            {
+                c = vertex[i][j];
+                if(c == remove_num1)
                     continue;
-                if(cs[i].is_in_c == 0 && uncover_vertex_index[i] == -1)
+                if(cs[c].is_in_c == 0 && uncover_vertex_index[c] == -1)
                 {
-                        uncover_vertex[uncover_length] = i;
-                        uncover_vertex_index[i] = uncover_length;
-                        uncover_length++;
+                    uncover_vertex[uncover_length] = c;
+                    uncover_vertex_index[c] = uncover_length;
+                    uncover_length++;
                 }
-                k = vertex_neightbourNum[i];
-                for(j = 0; j < k; j++)
-                {
-                        c = vertex[i][j];
-                        if(c == remove_num1)
-                            continue;
-                        if(cs[c].is_in_c == 0 && uncover_vertex_index[c] == -1)
-                        {
-                                uncover_vertex[uncover_length] = c;
-                                uncover_vertex_index[c] = uncover_length;
-                                uncover_length++;
-                        }
-                }
+            }
         }
 
         best_in_c=find_best_in_c(1);
@@ -1093,76 +1093,76 @@ void localsearch(int maxStep){
         //buger();
         if(uncover_vertex_index[best_in_c] == -1)
         {
-                uncover_vertex[uncover_length] = best_in_c;
-                uncover_vertex_index[best_in_c] = uncover_length;
-                uncover_length++;
+            uncover_vertex[uncover_length] = best_in_c;
+            uncover_vertex_index[best_in_c] = uncover_length;
+            uncover_length++;
         }
 
         h = vertex_neightbourNum[best_in_c];
         for(v = 0; v < h; v++)
         {
-                i = vertex[best_in_c][v];
-                if(cs[i].is_in_c == 1)
-                        continue;
-                if(cs[i].is_in_c == 0 && uncover_vertex_index[i] == -1)
+            i = vertex[best_in_c][v];
+            if(cs[i].is_in_c == 1)
+                continue;
+            if(cs[i].is_in_c == 0 && uncover_vertex_index[i] == -1)
+            {
+                uncover_vertex[uncover_length] = i;
+                uncover_vertex_index[i] = uncover_length;
+                uncover_length++;
+            }
+            k = vertex_neightbourNum[i];
+            for(j = 0; j < k; j++)
+            {
+                c = vertex[i][j];
+                if(c == best_in_c)
+                    continue;
+                if(cs[c].is_in_c == 0 && uncover_vertex_index[c] == -1)
                 {
-                        uncover_vertex[uncover_length] = i;
-                        uncover_vertex_index[i] = uncover_length;
-                        uncover_length++;
+                    uncover_vertex[uncover_length] = c;
+                    uncover_vertex_index[c] = uncover_length;
+                    uncover_length++;
                 }
-                k = vertex_neightbourNum[i];
-                for(j = 0; j < k; j++)
-                {
-                        c = vertex[i][j];
-                        if(c == best_in_c)
-                                continue;
-                        if(cs[c].is_in_c == 0 && uncover_vertex_index[c] == -1)
-                        {
-                                uncover_vertex[uncover_length] = c;
-                                uncover_vertex_index[c] = uncover_length;
-                                uncover_length++;
-                        }
-                }
+            }
         }
-            //cout << "a";
+        //cout << "a";
         while(uncover_num>0)
         {
-                int sr=INT_MIN, ct;
-                maxc=-1;
+            int sr=INT_MIN, ct;
+            maxc=-1;
 
-                for(v = 0; v < uncover_length; v++)
-                {
-                        j = uncover_vertex[v];
-                        if(cs[j].config == 0 || cs[j].is_in_c == 1)
-                                continue;
-                        k=compare(sr,ct, cs[j].score, cs[j].cost);
-                        if(sr==INT_MIN||k<0){
-                                sr=cs[j].score;
-                                ct=cs[j].cost;
-                                maxc=j;
-                        }
-                        else if(k == 0 &&  cs[maxc].config == cs[j].config && cs[j].time_stamp < cs[maxc].time_stamp || k == 0 && cs[maxc].config < cs[j].config)
-                        {
-                                maxc=j;
-                        }
+            for(v = 0; v < uncover_length; v++)
+            {
+                j = uncover_vertex[v];
+                if(cs[j].config == 0 || cs[j].is_in_c == 1)
+                    continue;
+                k=compare(sr,ct, cs[j].score, cs[j].cost);
+                if(sr==INT_MIN||k<0){
+                    sr=cs[j].score;
+                    ct=cs[j].cost;
+                    maxc=j;
                 }
-                        assert(maxc != -1);
-                        add(maxc, 1, 1);
-                        tabu_list.insert(maxc);
-                        cs[maxc].time_stamp = step;
-                        uncov_r_weight_inc();
+                else if(k == 0 &&  cs[maxc].config == cs[j].config && cs[j].time_stamp < cs[maxc].time_stamp || k == 0 && cs[maxc].config < cs[j].config)
+                {
+                    maxc=j;
+                }
+            }
+            assert(maxc != -1);
+            add(maxc, 1, 1);
+            tabu_list.insert(maxc);
+            cs[maxc].time_stamp = step;
+            uncov_r_weight_inc();
             //cout <<" " <<maxc ;
         }
-            //buger();
+        //buger();
         for(v = 0; v < uncover_length; v++)
-                uncover_vertex_index[uncover_vertex[v]] = -1;
+            uncover_vertex_index[uncover_vertex[v]] = -1;
 
-            //update_best_sol();
+        //update_best_sol();
         step++;
         each_iter++;
         bms_thre = bms_thre*2;
         if(bms_thre >cs_size)bms_thre-=cs_size;
-            if(step>=total_step) break;
+        if(step>=total_step) break;
     }
 }
 
@@ -1170,13 +1170,13 @@ void localsearch(int maxStep){
 void update_best_sol(){
     int i,j,v;
     if(current_sol < best_value){
-	each_iter=0;
+        each_iter=0;
         best_value = current_sol;
         for(v=0;v<remain_num;v++){
-                j = remain_vertex[v];
-                best_sol[j]=0;
-                if(cs[j].is_in_c){
-                        best_sol[j]=1;
+            j = remain_vertex[v];
+            best_sol[j]=0;
+            if(cs[j].is_in_c){
+                best_sol[j]=1;
             }
         }
 
@@ -1187,55 +1187,55 @@ void update_best_sol(){
 }
 
 int main(int argc, char *argv[]){
-	if(argc<3){
+    if(argc<3){
         printf("input wrong\n");
         return 0;
-	}
+    }
 
-	build_instance_massive(argv[1]);
-  	//printf("%s	",argv[1]);
+    build_instance_massive(argv[1]);
+    //printf("%s	",argv[1]);
     seed=atoi(argv[2]);
-	time_limit=atof(argv[3]);
-	total_step=INT_MAX;
+    time_limit=atof(argv[3]);
+    total_step=INT_MAX;
 
-	srand(seed);
+    srand(seed);
 
     init();
-	init_reduce();
+    init_reduce();
     // graph_reduce();
     return 0;
-	/*printf("c %s",argv[1]);
-	printf("p cnf %d %d 201\n", remain_num, remain_num*2);
-	for(int i = 0; i < remain_num; i++){
+    /*printf("c %s",argv[1]);
+    printf("p cnf %d %d 201\n", remain_num, remain_num*2);
+    for(int i = 0; i < remain_num; i++){
     int v1 = remain_vertex[i];
     printf("201 %d ", v1+1);
     for (int j = 0; j < vertex_neightbourNum[v1]; j++){
-			int v2 = vertex[v1][j];
-			printf("%d ",v2+1);
+            int v2 = vertex[v1][j];
+            printf("%d ",v2+1);
     }
     printf("0\n");
-	}
+    }
 
-	for(int i = 0; i < remain_num; i++){
+    for(int i = 0; i < remain_num; i++){
     int v1 = remain_vertex[i];
     printf("1 -%d 0\n",v1+1);
 
-	}
-	exit(0);
-	*/
+    }
+    exit(0);
+    */
 
 
-	times(&start);
-	start_time = start.tms_utime + start.tms_stime;
-	bms = 100;
+    times(&start);
+    start_time = start.tms_utime + start.tms_stime;
+    bms = 100;
 
-	init_best();
+    init_best();
 
-	localsearch(total_step);
+    localsearch(total_step);
 
-	if(!check()) printf("wrong answer \n");
-	printf("%ld	",best_value);
-	printf("%.2f\n",  real_time);
-	free_all();
-	return 0;
+    if(!check()) printf("wrong answer \n");
+    printf("%ld	",best_value);
+    printf("%.2f\n",  real_time);
+    free_all();
+    return 0;
 }

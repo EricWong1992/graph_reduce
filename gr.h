@@ -18,8 +18,8 @@
 using namespace std;
 
 struct Edge{
-	int v1;
-	int v2;
+    int v1;
+    int v2;
 };
 
 Edge *edge;////////////////////////////////////////
@@ -32,14 +32,14 @@ int t_length;
 int *t_index;/////////////////////////////////////////
 
 typedef struct Vertex_information{
-	int num_in_c;
-	int config;
-	char is_in_c;
-	int cost;
-	int score;						//加入该顶点后，自己及邻居从未支配到支配的顶点数量
-	int time_stamp;
-	int locked;
-	bool dominated;
+    int num_in_c;
+    int config;
+    char is_in_c;
+    int cost;
+    int score;						//加入该顶点后，自己及邻居从未支配到支配的顶点数量
+    int time_stamp;
+    int locked;
+    bool dominated;
 }Vertex_information;
 
 Vertex_information *cs;
@@ -47,18 +47,18 @@ Vertex_information *cs;
 class NeighborSet
 {
 public:
-	explicit NeighborSet(int _v)
-	{
-		v = _v;
-		neighbors = new int[cs[v].score];
-	}
-	~NeighborSet()
-	{
-		delete neighbors;
-		neighbors = nullptr;
-	}
-	int v;
-	int* neighbors;
+    explicit NeighborSet(int _v)
+    {
+        v = _v;
+        neighbors = new int[cs[v].score];
+    }
+    ~NeighborSet()
+    {
+        delete neighbors;
+        neighbors = nullptr;
+    }
+    int v;
+    int* neighbors;
 };
 
 tms start, finish;
@@ -130,21 +130,21 @@ void update_score(int v, int cur_level, int total_level);
 
 void free_all(){
     free(vertex_neightbourNum_bak);
-	free(vertex_neightbourNum);
-	free(best_sol);
-	free(dominate_set);
-	free(vertex_weight);
-	free(t);
-	free(t_index);
-	free(cs);
-	free(best_array);
-	free(reduce);
-	free(uncover_vertex);
-	free(uncover_vertex_index);
-	free(remain_vertex);
-	free(cs_vertex_index);
-	free(cs_vertex);
-	for(int i = 0; i < vertex_num; i++)
+    free(vertex_neightbourNum);
+    free(best_sol);
+    free(dominate_set);
+    free(vertex_weight);
+    free(t);
+    free(t_index);
+    free(cs);
+    free(best_array);
+    free(reduce);
+    free(uncover_vertex);
+    free(uncover_vertex_index);
+    free(remain_vertex);
+    free(cs_vertex_index);
+    free(cs_vertex);
+    for(int i = 0; i < vertex_num; i++)
         free(vertex[i]);
 }
 
@@ -236,6 +236,3 @@ int build_instance_massive(char *filename)
 
     return 1;
 }
-
-
-
