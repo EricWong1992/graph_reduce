@@ -277,12 +277,12 @@ void graph_reduce()
     for (size_t i = 0; i < vertex_num; i++)
         if (cs[i].num_in_c == 0)
             q_searchset.push(i);
-    while (!q_searchset.empty())
-    {
+    while (!q_searchset.empty()) {
         //时间计算
         times(&finish);
-        double t = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
-        t = round(t * 100)/100.0;
+        double t =
+                double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime) / sysconf(_SC_CLK_TCK);
+        t = round(t * 100) / 100.0;
         if (t > time_limit)
             break;
         iter++;
@@ -298,8 +298,7 @@ void graph_reduce()
         node_score[set_count++] = cs[v].score;
         for (int j = 0; j < vertex_neightbourNum[v] && set_count < cs[v].score; ++j) {
             int v_neighbor = vertex[v][j];
-            if (cs[v_neighbor].num_in_c == 0)
-            {
+            if (cs[v_neighbor].num_in_c == 0) {
                 node[set_count] = v_neighbor;
                 node_score[set_count] = cs[v_neighbor].score;
                 ++set_count;
@@ -307,14 +306,12 @@ void graph_reduce()
         }
         if (set_count == 1)
             lock_vertex(v, 1);
-        else
-        {
+        else {
             //寻找score最大的节点
             int max_score_index = 0;
             int max_score = node_score[0];
             for (int i = 1; i < set_count; ++i) {
-                if (node_score[i] > max_score)
-                {
+                if (node_score[i] > max_score) {
                     max_score = node_score[i];
                     max_score_index = i;
                 }
@@ -324,8 +321,7 @@ void graph_reduce()
             int cnt = 0;
             //初始化超集候选集合元素
             max_set->neighbors[cnt++] = max_score_v;
-            for (int i = 0; i < vertex_neightbourNum[max_score_v] && cnt < max_score; ++i)
-            {
+            for (int i = 0; i < vertex_neightbourNum[max_score_v] && cnt < max_score; ++i) {
                 int v_neighbor = vertex[max_score_v][i];
                 if (cs[v_neighbor].num_in_c == 0)
                     max_set->neighbors[cnt++] = v_neighbor;
@@ -374,12 +370,13 @@ void graph_reduce()
             }
             delete max_set;
         }
+    }
     cout << "iter: " << iter << endl;
     print_reduce_graph();
     times(&finish);
     double t = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
     t = round(t * 100)/100.0;
-    cout << "耗时：" << t << "s" <<endl;
+    cout << "Time: " << t << "s" <<endl;
 }
 
 void print_reduce_graph()
@@ -399,12 +396,12 @@ void print_reduce_graph()
         else
             candidate_num++;
     }
-    std::cout << "总节点数：" << vertex_num << endl;
-    std::cout << "候选解数：" << candidate_num << endl;
-    std::cout << "删除节点个数：" << remove_num << endl;
-    std::cout << "固定节点数：" << locked_num << endl;
-    std::cout << "未支配个数：" << uncover_num << endl;
-    std::cout <<  "压缩比：" <<  fixed << setprecision(2) << remove_num * 1.0 / vertex_num * 100 << "%" << endl;
+    std::cout << "Total Vertex: " << vertex_num << endl;
+    std::cout << "Candidate: " << candidate_num << endl;
+    std::cout << "Delete Vertex: " << remove_num << endl;
+    std::cout << "Fixed Vertex: " << locked_num << endl;
+    std::cout << "Uncover Vertex: " << uncover_num << endl;
+    std::cout << "Percent: " <<  fixed << setprecision(2) << remove_num * 1.0 / vertex_num * 100 << "%" << endl;
 }
 
 inline int compare(int s1, int c1, int s2, int c2){
