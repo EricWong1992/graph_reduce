@@ -384,24 +384,35 @@ void print_reduce_graph()
     int locked_num = 0;
     int uncover_num = 0;
     int remove_num = 0;
-    int candidate_num = 0;
+    int remain_num = 0;
+    int score_lock_0 = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
         if (cs[i].locked == 1)
+        {
             locked_num++;
+            if (cs[i].score == 1)
+                score_lock_0++;
+        }
         if (cs[i].num_in_c == 0)
             uncover_num++;
         if (cs[i].score == 0)
             remove_num++;
         else
-            candidate_num++;
+            if (cs[i].locked != 1)
+                remain_num++;
     }
+    cout << "score_lock_0: " << score_lock_0 << endl;
+    if (remain_num + locked_num + remove_num == vertex_num)
+        cout << "check ok" << endl;
+    else
+        cout << vertex_num - remain_num - locked_num - remove_num << endl;
     std::cout << "Total Vertex: " << vertex_num << endl;
-    std::cout << "Candidate: " << candidate_num << endl;
     std::cout << "Delete Vertex: " << remove_num << endl;
     std::cout << "Fixed Vertex: " << locked_num << endl;
     std::cout << "Uncover Vertex: " << uncover_num << endl;
-    std::cout << "Percent: " <<  fixed << setprecision(2) << remove_num * 1.0 / vertex_num * 100 << "%" << endl;
+    std::cout << "Remain Vertex:" << remain_num << endl;
+    std::cout << "Percent: " <<  fixed << setprecision(2) << remain_num * 1.0 / vertex_num * 100 << "%" << endl;
 }
 
 inline int compare(int s1, int c1, int s2, int c2){

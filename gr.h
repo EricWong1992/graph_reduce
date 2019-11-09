@@ -39,7 +39,6 @@ typedef struct Vertex_information{
     int score;						//加入该顶点后，自己及邻居从未支配到支配的顶点数量
     int time_stamp;
     int locked;
-    bool dominated;
 }Vertex_information;
 
 Vertex_information *cs;
@@ -192,7 +191,6 @@ int build_instance_massive(char *filename)
         cs[i].is_in_c=0;
         cs[i].num_in_c=0;
         cs[i].locked = 0;
-        cs[i].dominated = false;
         vertex_neightbourNum[i]=0;
         best_sol[i]=0;
         dominate_set[i] = 0;
