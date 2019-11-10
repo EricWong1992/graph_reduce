@@ -283,10 +283,9 @@ void graph_reduce()
     while (!q_searchset.empty()) {
         //时间计算
         times(&finish);
-        double t =
-                double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime) / sysconf(_SC_CLK_TCK);
-        t = round(t * 100) / 100.0;
-        if (t > time_limit)
+        double tt = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime) / sysconf(_SC_CLK_TCK);
+        tt = round(tt * 100) / 100.0;
+        if (tt > time_limit)
             break;
         iter++;
         int v = q_searchset.front();
@@ -395,9 +394,9 @@ void graph_reduce()
     cout << "iter: " << iter << endl;
     print_reduce_graph();
     times(&finish);
-    double t = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
-    t = round(t * 100)/100.0;
-    cout << "Time: " << t << "s" <<endl;
+    double tt = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
+    tt= round(tt * 100)/100.0;
+    cout << "Time: " << tt << "s" <<endl;
 }
 
 void print_reduce_graph()
