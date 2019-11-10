@@ -39,6 +39,7 @@ typedef struct Vertex_information{
     int score;						//加入该顶点后，自己及邻居从未支配到支配的顶点数量
     int time_stamp;
     int locked;
+    int is_in_search;       //是否在搜索集
 }Vertex_information;
 
 Vertex_information *cs;
@@ -113,7 +114,6 @@ int *vertex_neightbourNum_bak;			//original neighbornum backup
 
 int *best_sol;					//最优解
 int *vertex_weight;		//顶点权值
-int *dominate_set;		//支配集
 
 void init();
 inline int compare(int s1, int c1, int s2, int c2);
@@ -141,7 +141,6 @@ void free_all(){
     free(vertex_neightbourNum_bak);
     free(vertex_neightbourNum);
     free(best_sol);
-    free(dominate_set);
     free(vertex_weight);
     free(t);
     free(t_index);
@@ -182,7 +181,6 @@ int build_instance_massive(char *filename)
 
     best_sol=(int *)malloc(vertex_num*sizeof(int));//最优解
     vertex_weight=(int *)malloc(vertex_num*sizeof(int));//动态权重
-    dominate_set = (int*)malloc(vertex_num * sizeof(int));//支配集
 
     for(size_t i=0;i<vertex_num;i++){
         cs[i].cost=1;
@@ -191,9 +189,9 @@ int build_instance_massive(char *filename)
         cs[i].is_in_c=0;
         cs[i].num_in_c=0;
         cs[i].locked = 0;
+        cs[i].is_in_search = 0;
         vertex_neightbourNum[i]=0;
         best_sol[i]=0;
-        dominate_set[i] = 0;
         t[i] = 0;
     }
 
