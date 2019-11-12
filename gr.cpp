@@ -201,36 +201,37 @@ void lock_vertex(int c, int locked_add)
     //	remove_from_uncover(c);
     for (size_t h = 0; h < vertex_neightbourNum[c]; h++)
     {
-        int i = vertex[c][h];
+        int v_n = vertex[c][h];
         //if (cs[i].num_in_c == 0)
         //	remove_from_uncover(i);
-        cs[i].num_in_c++;
+        cs[v_n].num_in_c++;
         if (cs[c].num_in_c == 0)
-            //i被支配，修改score
+            //v_n被支配，修改score
             //c 支配次数 0->1
-            cs[i].score -= vertex_weight[c];
-        else if (cs[c].num_in_c == 1 && cs[i].is_in_c == 1)
+            //TODO: if add c make v_n_1 dominated and v_n_1, v_n connected, score-= vertex.weight[v_n_1]
+            cs[v_n].score -= vertex_weight[c];
+        else if (cs[c].num_in_c == 1 && cs[v_n].is_in_c == 1)
         {
-            //i存在在候选解, 此时i的score值为负
+            //v_n存在在候选解, 此时v_n的score值为负
             //c 支配次数 1->2
-            cs[i].score += vertex_weight[c];
+            cs[v_n].score += vertex_weight[c];
         }
-        if (cs[i].is_in_c == 1)
+        if (cs[v_n].is_in_c == 1)
         {
-            if (cs[i].num_in_c == 2)
+            if (cs[v_n].num_in_c == 2)
                 /*
-                    i已经在候选解，c加入候选解后，i又被支配了一次
+                    v_n已经在候选解，c加入候选解后，v_n又被支配了一次
                 */
-                cs[i].score += vertex_weight[i]; //TODO why
-            modify_t(i);
+                cs[v_n].score += vertex_weight[v_n]; //TODO why? 应该+=vertex_weight[c]?
+            modify_t(v_n);
             continue;
         }
         //处理二层邻居
         int cnt = 0;
         int s = 0;
-        for (size_t l = 0; l < vertex_neightbourNum[i]; l++)
+        for (size_t l = 0; l < vertex_neightbourNum[v_n]; l++)
         {
-            int j = vertex[i][l];
+            int j = vertex[v_n][l];
             if (j == c)
                 continue;
             if (cs[j].is_in_c)
@@ -239,34 +240,65 @@ void lock_vertex(int c, int locked_add)
                 cnt++;
             }
         }
-        if (cs[i].is_in_c)
+        if (cs[v_n].is_in_c)
         {
-            s = i;
+            s = v_n;
             cnt++;
         }
         if (cnt == 0)
         {
             //c是i的邻居里面第一个加入候选解的
-            cs[i].score -= vertex_weight[i];
-            for (size_t l = 0; l < vertex_neightbourNum[i]; l++)
+            cs[v_n].score -= vertex_weight[v_n];
+            for (size_t l = 0; l < vertex_neightbourNum[v_n]; l++)
             {
-                int j = vertex[i][l];
+                int j = vertex[v_n][l];
                 if (j == c)
                     continue;
                 //i被c支配，所以二层邻居j score值减少
-                cs[j].score -= vertex_weight[i];
+                cs[j].score -= vertex_weight[v_n];
                 modify_t(j);
             }
         }
         else if (cnt == 1)
         {
             //c是这里组里第二个加入候选解的顶点
-            cs[s].score += vertex_weight[i];
+            cs[s].score += vertex_weight[v_n];
             modify_t(s);
         }
-        modify_t(i);
+        modify_t(v_n);
     }
     cs[c].num_in_c++;
+}
+
+//锁定通过超集寻找到的点
+void lock_vertex1(int v)
+{
+    cs[v].locked = 1;
+    cs[v].is_in_c = 1;
+    // //1. v已经被支配
+    // if (cs[v].num_in_c > 0)
+    // {
+
+    // }
+    // //2.v尚未被支配
+    // else
+    // {
+    // }
+    for (size_t i = 0; i < vertex_neightbourNum[v]; i++)
+    {
+        int v_n = vertex[v][i];
+        cs[v_n].num_in_c++;
+        if (cs[v_n].locked == 1)
+        {
+            cs[v_n].score += vertex_weight[v];
+        }
+        else
+        {
+            cs[v_n].score -= vertex_weight[v];
+        }
+        
+    }
+    
 }
 
 void graph_reduce()
@@ -294,17 +326,17 @@ void graph_reduce()
         if (cs[v].score <= 0)
             continue;
         int set_count = 0;
-        //存放v闭邻居集合
-        vector<int> node(cs[v].score);
-        vector<int> node_score(cs[v].score);
-        node[set_count] = v;
-        node_score[set_count++] = cs[v].score;
-        // && set_count < cs[v].score
+        //存放v闭邻居score>0集合
+        vector<int> node;
+        vector<int> node_score;
+        node.push_back(v);
+        node_score.push_back(cs[v].score);
+        set_count++;
         for (int j = 0; j < vertex_neightbourNum[v]; ++j) {
             int v_neighbor = vertex[v][j];
             if (cs[v_neighbor].score > 0) {
-                node[set_count] = v_neighbor;
-                node_score[set_count] = cs[v_neighbor].score;
+                node.push_back(v_neighbor);
+                node_score.push_back(cs[v_neighbor].score);
                 ++set_count;
             }
         }
@@ -337,10 +369,15 @@ void graph_reduce()
                     continue;
                 int v_neighbor = node[i];
                 int v_neighbor_score = node_score[i];
-                if (cs[v_neighbor].num_in_c == 0 && !max_set->is_in_set(v_neighbor)) {
-                    is_super_set = false;
-                    cnt++;
-                    break;
+                if (cs[v_neighbor].num_in_c == 0)
+                {
+                    if (!max_set->is_in_set(v_neighbor))
+                    {
+                        is_super_set = false;
+                        break;
+                    }
+                    else
+                        cnt++;
                 }
                 for (int j = 0; j < vertex_neightbourNum[v_neighbor] && cnt < v_neighbor_score; ++j) {
                     int v_neighbor_neighbor = vertex[v_neighbor][j];
@@ -365,7 +402,7 @@ void graph_reduce()
                             int v_n_n = vertex[v_n][j];
                             //v_n_n邻居有未被支配的顶点
                             //v_n的支配次数不止一次，也就是在加入顶点max_set->v后，v_n_n的score值发生变化
-                            if (cs[v_n_n].score > 0 && cs[v_n].num_in_c > 1) 
+                            if (cs[v_n_n].score > 0 && cs[v_n].num_in_c == 1) 
                             {
                                 if (cs[v_n_n].num_in_c == 0 && cs[v_n_n].is_in_search == 0)
                                 {
@@ -406,10 +443,12 @@ void print_reduce_graph()
     int remove_num = 0;
     int remain_num = 0;
     int score_lock_0 = 0;
+    cout << "lock: ";
     for (size_t i = 0; i < vertex_num; i++)
     {
         if (cs[i].locked == 1)
         {
+            cout << i+1 << " ";
             locked_num++;
             if (cs[i].score == 1)
                 score_lock_0++;
