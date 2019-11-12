@@ -149,7 +149,7 @@ void init_reduce()
     }
     uncover_num = remain_num;
     print_reduce_graph();
-    graph_reduce();
+    super_set_reduce();
 }
 
 //顶点的被支配次数0->1
@@ -181,7 +181,7 @@ void modify_t(int v)
     }
 }
 
-//把顶点c固定(暂时作为候选解)
+//把顶点c固定
 void lock_vertex(int c, int locked_add)
 {
     cs[c].locked = 1;
@@ -286,6 +286,9 @@ void lock_vertex1(int v)
     {
         int v_n = vertex[v][i];
         cs[v_n].num_in_c++;
+        //v_n首次被支配，减去自身权值
+        if (cs[v_n].num_in_c == 1)
+            cs[v_n].score -= vertex_weight[v_n];
         if (cs[v].num_in_c == 0)
         {
             //所有邻居都没有被lock
@@ -319,7 +322,7 @@ void lock_vertex1(int v)
             }
             if (is_connected_with_v)//            && cs[v_n_n].num_in_c == 1)
             {
-                //此时二层邻居也是一层邻居，处理1层邻居，后面循环还会处理到二层邻居
+                //此时二层邻居也是一层邻居，先处理1层邻居，后面循环还会处理到二层邻居
                 if (cs[v_n].locked == 1)
                 {
                     cs[v_n].score += vertex_weight[v_n_n];
@@ -331,22 +334,20 @@ void lock_vertex1(int v)
             }
             else
             {
-                if (cs[v_n].num_in_c >= 1)
+                /*
+                    v_n仅仅被v一个顶点支配时，才会影响二层邻居score值
+                */
+                if (cs[v_n].num_in_c == 1)
                 {
-                    //v的lock情况对v_n_n无影响
-                    //v_n已经被lock或者被v之外的顶点支配
+                    cs[v_n_n].score -= vertex_weight[v_n];
                 }
-               else
-               {
-                   cs[v_n_n].score -= vertex_weight[v_n];
-               }
             }
         }
     }
     cs[v].num_in_c++;
 }
 
-void graph_reduce()
+void super_set_reduce()
 {
     int iter = 0;
     std::cout << "second step--->: super set" << endl;
@@ -386,7 +387,7 @@ void graph_reduce()
             }
         }
         if (set_count == 1)
-            // lock_vertex(v, 1);
+//             lock_vertex(v, 1);
             lock_vertex1(v);
         else {
             //寻找score最大的节点
@@ -439,33 +440,34 @@ void graph_reduce()
                 }
                 if (!is_super_set)
                     break;
-                else {
-                    // lock_vertex(max_set->v, 1);
-                    lock_vertex1(max_set->v);
-                    //max_set->v的所有未覆盖的二层邻居都加入队列
-                    for (size_t i = 0; i < vertex_neightbourNum[max_set->v]; i++) {
-                        int v_n = vertex[max_set->v][i];
-                        for (size_t j = 0; j < vertex_neightbourNum[v_n] ; j++) {
-                            int v_n_n = vertex[v_n][j];
-                            //v_n_n邻居有未被支配的顶点
-                            //v_n的支配次数不止一次，也就是在加入顶点max_set->v后，v_n_n的score值发生变化
-                            if (cs[v_n_n].score > 0 && cs[v_n].num_in_c == 1) 
+            }
+            if (is_super_set)
+            {
+//                lock_vertex(max_set->v, 1);
+                 lock_vertex1(max_set->v);
+                //max_set->v的所有未覆盖的二层邻居都加入队列
+                for (size_t i = 0; i < vertex_neightbourNum[max_set->v]; i++) {
+                    int v_n = vertex[max_set->v][i];
+                    for (size_t j = 0; j < vertex_neightbourNum[v_n] ; j++) {
+                        int v_n_n = vertex[v_n][j];
+                        //v_n_n邻居有未被支配的顶点
+                        //v_n的支配次数不止一次，也就是在加入顶点max_set->v后，v_n_n的score值发生变化
+                        if (cs[v_n_n].score > 0 && cs[v_n].num_in_c == 1) 
+                        {
+                            if (cs[v_n_n].num_in_c == 0 && cs[v_n_n].is_in_search == 0)
                             {
-                                if (cs[v_n_n].num_in_c == 0 && cs[v_n_n].is_in_search == 0)
+                                cs[v_n_n].is_in_search = 1;
+                                q_searchset.push(v_n_n);
+                            }
+                            int cnt2 = 0;
+                            for (size_t k = 0; k < vertex_neightbourNum[v_n_n] && cnt2 < cs[v_n_n].score; k++)
+                            {
+                                int v_n_n_n = vertex[v_n_n][k];
+                                if (cs[v_n_n_n].num_in_c == 0 && cs[v_n_n_n].is_in_search == 0)
                                 {
-                                    cs[v_n_n].is_in_search = 1;
-                                    q_searchset.push(v_n_n);
-                                }
-                                int cnt2 = 0;
-                                for (size_t k = 0; k < vertex_neightbourNum[v_n_n] && cnt2 < cs[v_n_n].score; k++)
-                                {
-                                    int v_n_n_n = vertex[v_n_n][k];
-                                    if (cs[v_n_n_n].num_in_c == 0 && cs[v_n_n_n].is_in_search == 0)
-                                    {
-                                        cs[v_n_n_n].is_in_search = 1;
-                                        q_searchset.push(v_n_n_n);
-                                        cnt2++;
-                                    }
+                                    cs[v_n_n_n].is_in_search = 1;
+                                    q_searchset.push(v_n_n_n);
+                                    cnt2++;
                                 }
                             }
                         }
@@ -474,7 +476,7 @@ void graph_reduce()
             }
             delete max_set;
         }
-        print111(iter);
+//        print111(iter);
     }
     cout << "iter: " << iter << endl;
     print_reduce_graph();
@@ -493,11 +495,11 @@ void print_reduce_graph()
     int score_lock_0 = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
-        cout << i+1 << ": " << cs[i].score << endl;
+//        cout << i+1 << ": " << cs[i].score << endl;
         if (cs[i].locked == 1)
         {
             locked_num++;
-            if (cs[i].score == 1)
+            if (cs[i].score == 0)
                 score_lock_0++;
         }
         if (cs[i].num_in_c == 0)
@@ -1299,7 +1301,7 @@ int main(int argc, char *argv[]){
 
     init();
     init_reduce();
-    // graph_reduce();
+    // super_set_reduce();
     return 0;
     /*printf("c %s",argv[1]);
     printf("p cnf %d %d 201\n", remain_num, remain_num*2);

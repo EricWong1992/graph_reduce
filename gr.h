@@ -124,17 +124,14 @@ int in_tabu(int i);
 int find_best_in_c(int allowTabu);
 void uncov_r_weight_inc();
 void localsearch(int maxStep);
-long cost_C();
 void update_best_sol();
 int check();
-void graph_reduce();
-void print_cnf();
+void super_set_reduce();
 void print_reduce_graph();
 /**********api start*********/
 //lock vertex
 void lock_vertex(int c, int locked_add);
-//update vertex score
-void update_score(int v, int cur_level, int total_level);
+void lock_vertex1(int v);
 /**********api end*********/
 
 void free_all(){
