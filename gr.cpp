@@ -369,7 +369,7 @@ void super_set_reduce()
         int v = q_searchset.front();
         q_searchset.pop();
         cs[v].is_in_search = 0;
-        if (cs[v].score <= 0)
+        if (cs[v].num_in_c != 0)
             continue;
         int set_count = 0;
         //存放v闭邻居score>0集合
@@ -387,8 +387,8 @@ void super_set_reduce()
             }
         }
         if (set_count == 1)
-//             lock_vertex(v, 1);
-            lock_vertex1(v);
+            lock_vertex(v, 1);
+            // lock_vertex1(v);
         else {
             //寻找score最大的节点
             int max_score_index = 0;
@@ -403,7 +403,8 @@ void super_set_reduce()
             auto max_set = new NeighborSet(max_score_v);
             int cnt = 0;
             //初始化超集候选集合元素
-            max_set->neighbors[cnt++] = max_score_v;
+            if (cs[max_score_v].num_in_c == 0)
+                max_set->neighbors[cnt++] = max_score_v;
             for (int i = 0; i < vertex_neightbourNum[max_score_v] && cnt < max_score; ++i) {
                 int v_neighbor = vertex[max_score_v][i];
                 if (cs[v_neighbor].num_in_c == 0)
@@ -416,6 +417,7 @@ void super_set_reduce()
                     continue;
                 int v_neighbor = node[i];
                 int v_neighbor_score = node_score[i];
+                cnt = 0;
                 if (cs[v_neighbor].num_in_c == 0)
                 {
                     if (!max_set->is_in_set(v_neighbor))
@@ -431,7 +433,6 @@ void super_set_reduce()
                     if (cs[v_neighbor_neighbor].num_in_c == 0) {
                         if (max_set->is_in_set(v_neighbor_neighbor)) {
                             cnt++;
-                            continue;
                         } else {
                             is_super_set = false; //不是超集，跳出循环
                             break;
@@ -443,8 +444,8 @@ void super_set_reduce()
             }
             if (is_super_set)
             {
-//                lock_vertex(max_set->v, 1);
-                 lock_vertex1(max_set->v);
+                lock_vertex(max_set->v, 1);
+                //  lock_vertex1(max_set->v);
                 //max_set->v的所有未覆盖的二层邻居都加入队列
                 for (size_t i = 0; i < vertex_neightbourNum[max_set->v]; i++) {
                     int v_n = vertex[max_set->v][i];
@@ -454,12 +455,13 @@ void super_set_reduce()
                         //v_n的支配次数不止一次，也就是在加入顶点max_set->v后，v_n_n的score值发生变化
                         if (cs[v_n_n].score > 0 && cs[v_n].num_in_c == 1) 
                         {
+                            int cnt2 = 0;
                             if (cs[v_n_n].num_in_c == 0 && cs[v_n_n].is_in_search == 0)
                             {
                                 cs[v_n_n].is_in_search = 1;
                                 q_searchset.push(v_n_n);
+                                cnt2++;
                             }
-                            int cnt2 = 0;
                             for (size_t k = 0; k < vertex_neightbourNum[v_n_n] && cnt2 < cs[v_n_n].score; k++)
                             {
                                 int v_n_n_n = vertex[v_n_n][k];
@@ -500,7 +502,9 @@ void print_reduce_graph()
         {
             locked_num++;
             if (cs[i].score == 0)
+            {
                 score_lock_0++;
+            }
         }
         if (cs[i].num_in_c == 0)
             uncover_num++;
