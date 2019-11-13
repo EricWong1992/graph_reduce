@@ -268,84 +268,6 @@ void lock_vertex(int c, int locked_add)
     }
     cs[c].num_in_c++;
 }
-void print111(int iter)
-{
-    cout << "iter:" << iter << endl;;
-    for (size_t i = 0; i < vertex_num; i++)
-    {
-        cout << i+1 << ": " << cs[i].score << endl;
-    }
-}
-//锁定通过超集寻找到的点
-void lock_vertex1(int v)
-{
-    cs[v].locked = 1;
-    cs[v].is_in_c = 1;
-    cs[v].score = -cs[v].score;
-    for (size_t i = 0; i < vertex_neightbourNum[v]; i++)
-    {
-        int v_n = vertex[v][i];
-        cs[v_n].num_in_c++;
-        //v_n首次被支配，减去自身权值
-        if (cs[v_n].num_in_c == 1)
-            cs[v_n].score -= vertex_weight[v_n];
-        if (cs[v].num_in_c == 0)
-        {
-            //所有邻居都没有被lock
-            cs[v_n].score -= vertex_weight[v];
-        }else{
-            //有邻居被lock
-            if (cs[v_n].locked)
-                cs[v_n].score += vertex_weight[v];
-            else
-                cs[v_n].score -= vertex_weight[v];
-        }
-    }
-//    print111(0);
-    for (size_t i = 0; i < vertex_neightbourNum[v]; i++)
-    {
-        int v_n = vertex[v][i];
-        for (size_t j = 0; j < vertex_neightbourNum[v_n]; j++)
-        {
-            int v_n_n = vertex[v_n][j];
-            if (v_n_n == v)
-                continue;
-            //判断二层邻居是不是与v相连
-            bool is_connected_with_v = false;
-            for (size_t k = 0; k < vertex_neightbourNum[v]; k++)
-            {
-                if (vertex[v][k] == v_n_n)
-                {
-                    is_connected_with_v = true;
-                    break;
-                }
-            }
-            if (is_connected_with_v)//            && cs[v_n_n].num_in_c == 1)
-            {
-                //此时二层邻居也是一层邻居，先处理1层邻居，后面循环还会处理到二层邻居
-                if (cs[v_n].locked == 1)
-                {
-                    cs[v_n].score += vertex_weight[v_n_n];
-                }
-                else
-                {
-                    cs[v_n].score -= vertex_weight[v_n_n];
-                }
-            }
-            else
-            {
-                /*
-                    v_n仅仅被v一个顶点支配时，才会影响二层邻居score值
-                */
-                if (cs[v_n].num_in_c == 1)
-                {
-                    cs[v_n_n].score -= vertex_weight[v_n];
-                }
-            }
-        }
-    }
-    cs[v].num_in_c++;
-}
 
 void super_set_reduce()
 {
@@ -363,7 +285,7 @@ void super_set_reduce()
         times(&finish);
         double tt = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime) / sysconf(_SC_CLK_TCK);
         tt = round(tt * 100) / 100.0;
-        if (tt > time_limit)
+        if (time_limit != 0 && tt > time_limit)
             break;
         iter++;
         int v = q_searchset.front();
@@ -388,7 +310,6 @@ void super_set_reduce()
         }
         if (set_count == 1)
             lock_vertex(v, 1);
-            // lock_vertex1(v);
         else {
             //寻找score最大的节点
             int max_score_index = 0;
@@ -445,7 +366,6 @@ void super_set_reduce()
             if (is_super_set)
             {
                 lock_vertex(max_set->v, 1);
-                //  lock_vertex1(max_set->v);
                 //max_set->v的所有未覆盖的二层邻居都加入队列
                 for (size_t i = 0; i < vertex_neightbourNum[max_set->v]; i++) {
                     int v_n = vertex[max_set->v][i];
@@ -478,7 +398,6 @@ void super_set_reduce()
             }
             delete max_set;
         }
-//        print111(iter);
     }
     cout << "iter: " << iter << endl;
     print_reduce_graph();
@@ -497,7 +416,6 @@ void print_reduce_graph()
     int score_lock_0 = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
-//        cout << i+1 << ": " << cs[i].score << endl;
         if (cs[i].locked == 1)
         {
             locked_num++;
@@ -1305,7 +1223,6 @@ int main(int argc, char *argv[]){
 
     init();
     init_reduce();
-    // super_set_reduce();
     return 0;
     /*printf("c %s",argv[1]);
     printf("p cnf %d %d 201\n", remain_num, remain_num*2);
