@@ -128,6 +128,7 @@ void update_best_sol();
 int check();
 void super_set_reduce();
 void print_reduce_graph();
+void print_density();
 /**********api start*********/
 //lock vertex
 void lock_vertex(int c, int locked_add);

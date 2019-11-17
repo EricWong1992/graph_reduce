@@ -412,7 +412,7 @@ void print_reduce_graph()
     int locked_num = 0;
     int uncover_num = 0;
     int remove_num = 0;
-    int remain_num = 0;
+    remain_num = 0;
     int score_lock_0 = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
@@ -443,6 +443,31 @@ void print_reduce_graph()
     std::cout << "Uncover Vertex: " << uncover_num << endl;
     std::cout << "Remain Vertex:" << remain_num << endl;
     std::cout << "Percent: " <<  fixed << setprecision(2) << remain_num * 1.0 / vertex_num * 100 << "%" << endl;
+    print_density();
+}
+
+void print_density()
+{
+    int edge_cnt = 0;
+    for (size_t i = 0; i < vertex_num; i++)
+    {
+        if (cs[i].score == 0)
+        {
+            continue;
+        }
+        for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
+        {
+            int v_n = vertex[i][j];
+            if (v_n > i && cs[v_n].score != 0)
+            {
+                edge_cnt++;
+            }
+        }
+    }
+    cout << "Remain vertex: " << remain_num << endl;
+    cout << "Remain edges: " << edge_cnt << endl;
+    cout << "Density1(e/v): " << fixed << setprecision(2) << edge_cnt / remain_num << endl;
+    cout << "Density2(e/v2): " << fixed << setprecision(2) << edge_cnt / pow(remain_num, 2) << endl;
 }
 
 inline int compare(int s1, int c1, int s2, int c2){
@@ -458,31 +483,6 @@ inline int compare(int s1, int c1, int s2, int c2){
     else if(t1==t2) return 0;
     else return -1;
 }
-/*
-int check(){ // check if the solution is a correct cover
-    int i,j,k,v;
-    for(v=0;v<remain_num;v++)
-    {
-            j = remain_vertex[v];
-            reduce[j] = 0;
-    }
-
-    for(v=0;v<remain_num;v++){
-            j = remain_vertex[v];
-            if(best_sol[j]==0 && cs[j].locked == 1)
-                return 0;
-     if(best_sol[j]==0) continue;
-     reduce[j]=1;
-     for(k=0;k<vertex_neightbourNum[j];k++){
-       reduce[vertex[j][k]]=1;
-     }
-    }
-    for(v=0;v<remain_num;v++){
-            i = remain_vertex[v];
-     if(!reduce[i]) return 0;
-    }
-    return 1;
-}*/
 
 int check(){ // check if the solution is a correct cover
     int i,j,k,v;
@@ -1017,176 +1017,6 @@ void uncov_r_weight_inc(){
         }
     }
 }
-
-void localsearch(int maxStep){
-    step=1;
-    int i,j,k,h,l,v,c;
-    int best_in_c;
-    int maxc;
-    int flag = 0;
-    int rand_n;
-    int init_remove = 0;
-
-    for(v = 0; v < vertex_num; v++)
-        uncover_vertex_index[v] = -1;//////////////////////////////////
-
-    while(step<=maxStep)
-    {
-        i = -1;
-        /*
-            if(step % 100 == 0)
-            {
-                        times(&finish);
-                        double finish_time = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
-                        finish_time = round(finish_time * 100)/100.0;
-                        printf(" %ld %ld %f ", current_sol, best_value, finish_time);
-            buger();
-            }
-        */
-        while(uncover_num == 0)
-        {
-
-            if(t_length > 0)
-            {
-
-                rand_n = rand()%t_length;
-                i = t[rand_n];
-            }
-            else
-            {
-                update_best_sol();///////////////////
-                //i = find_best_in_c_simp(1);
-                //if(state == 0)
-                i = find_best_in_c_simp(0);
-                init_remove = 1;
-            }
-            remove(i, init_remove);
-        }
-
-        times(&finish);
-        double finish_time = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
-        finish_time = round(finish_time * 100)/100.0;
-        if(finish_time>time_limit) break;
-
-        init_remove = 1;
-        remove_num1 = i;
-        // cout << "r " << i;
-        //memset(uncover_vertex_index, -1, sizeof(uncover_vertex_index));
-        uncover_length = 0;
-
-        uncover_vertex[uncover_length] = remove_num1;
-        uncover_vertex_index[remove_num1] = uncover_length;
-        uncover_length++;
-
-        h = vertex_neightbourNum[remove_num1];
-        for(v = 0; v < h;v++)
-        {
-            i = vertex[remove_num1][v];
-            if(cs[i].is_in_c == 1)
-                continue;
-            if(cs[i].is_in_c == 0 && uncover_vertex_index[i] == -1)
-            {
-                uncover_vertex[uncover_length] = i;
-                uncover_vertex_index[i] = uncover_length;
-                uncover_length++;
-            }
-            k = vertex_neightbourNum[i];
-            for(j = 0; j < k; j++)
-            {
-                c = vertex[i][j];
-                if(c == remove_num1)
-                    continue;
-                if(cs[c].is_in_c == 0 && uncover_vertex_index[c] == -1)
-                {
-                    uncover_vertex[uncover_length] = c;
-                    uncover_vertex_index[c] = uncover_length;
-                    uncover_length++;
-                }
-            }
-        }
-
-        best_in_c=find_best_in_c(1);
-        if(state==0)best_in_c=find_best_in_c(0);
-        tabu_list.clear();
-        remove(best_in_c, init_remove);
-        cs[best_in_c].time_stamp=step;
-        //cout << " "<<best_in_c;
-        //buger();
-        if(uncover_vertex_index[best_in_c] == -1)
-        {
-            uncover_vertex[uncover_length] = best_in_c;
-            uncover_vertex_index[best_in_c] = uncover_length;
-            uncover_length++;
-        }
-
-        h = vertex_neightbourNum[best_in_c];
-        for(v = 0; v < h; v++)
-        {
-            i = vertex[best_in_c][v];
-            if(cs[i].is_in_c == 1)
-                continue;
-            if(cs[i].is_in_c == 0 && uncover_vertex_index[i] == -1)
-            {
-                uncover_vertex[uncover_length] = i;
-                uncover_vertex_index[i] = uncover_length;
-                uncover_length++;
-            }
-            k = vertex_neightbourNum[i];
-            for(j = 0; j < k; j++)
-            {
-                c = vertex[i][j];
-                if(c == best_in_c)
-                    continue;
-                if(cs[c].is_in_c == 0 && uncover_vertex_index[c] == -1)
-                {
-                    uncover_vertex[uncover_length] = c;
-                    uncover_vertex_index[c] = uncover_length;
-                    uncover_length++;
-                }
-            }
-        }
-        //cout << "a";
-        while(uncover_num>0)
-        {
-            int sr=INT_MIN, ct;
-            maxc=-1;
-
-            for(v = 0; v < uncover_length; v++)
-            {
-                j = uncover_vertex[v];
-                if(cs[j].config == 0 || cs[j].is_in_c == 1)
-                    continue;
-                k=compare(sr,ct, cs[j].score, cs[j].cost);
-                if(sr==INT_MIN||k<0){
-                    sr=cs[j].score;
-                    ct=cs[j].cost;
-                    maxc=j;
-                }
-                else if(k == 0 &&  cs[maxc].config == cs[j].config && cs[j].time_stamp < cs[maxc].time_stamp || k == 0 && cs[maxc].config < cs[j].config)
-                {
-                    maxc=j;
-                }
-            }
-            assert(maxc != -1);
-            add(maxc, 1, 1);
-            tabu_list.insert(maxc);
-            cs[maxc].time_stamp = step;
-            uncov_r_weight_inc();
-            //cout <<" " <<maxc ;
-        }
-        //buger();
-        for(v = 0; v < uncover_length; v++)
-            uncover_vertex_index[uncover_vertex[v]] = -1;
-
-        //update_best_sol();
-        step++;
-        each_iter++;
-        bms_thre = bms_thre*2;
-        if(bms_thre >cs_size)bms_thre-=cs_size;
-        if(step>=total_step) break;
-    }
-}
-
 
 void update_best_sol(){
     int i,j,v;
