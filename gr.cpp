@@ -464,10 +464,12 @@ void print_density()
             }
         }
     }
-    cout << "Density1: " << fixed << setprecision(2) << edge_num * 1.0 / (vertex_num * (vertex_num - 1)) * 100 << "%" << endl;
+    cout << "Remain vertex: " << remain_num << endl;
+    cout << "Remain edges: " << edge_cnt << endl;
+    cout << "Density1: " << fixed << setprecision(3) << edge_num *1.0 / vertex_num / (vertex_num - 1) * 100 << "%" << endl;
     if (remain_num != 0)
     {
-        cout << "Density2: " << fixed << setprecision(2) << edge_cnt * 1.0 / (remain_num * (remain_num - 1)) * 100 << "%" << endl;
+        cout << "Density2: " << fixed << setprecision(3) << edge_cnt * 1.0 / remain_num / (remain_num - 1) * 100 << "%" << endl;
     }
     else
     {
