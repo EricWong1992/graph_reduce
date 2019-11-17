@@ -401,6 +401,7 @@ void super_set_reduce()
     }
     cout << "iter: " << iter << endl;
     print_reduce_graph();
+    print_density();
     times(&finish);
     double tt = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
     tt= round(tt * 100)/100.0;
@@ -443,7 +444,6 @@ void print_reduce_graph()
     std::cout << "Uncover Vertex: " << uncover_num << endl;
     std::cout << "Remain Vertex:" << remain_num << endl;
     std::cout << "Percent: " <<  fixed << setprecision(2) << remain_num * 1.0 / vertex_num * 100 << "%" << endl;
-    print_density();
 }
 
 void print_density()
@@ -451,14 +451,14 @@ void print_density()
     int edge_cnt = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
-        if (cs[i].score == 0)
+        if (cs[i].score == 0 || cs[i].locked == 1)
         {
             continue;
         }
         for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
         {
             int v_n = vertex[i][j];
-            if (v_n > i && cs[v_n].score != 0)
+            if (v_n > i && cs[v_n].score != 0 && cs[v_n].locked != 1)
             {
                 edge_cnt++;
             }
@@ -466,8 +466,11 @@ void print_density()
     }
     cout << "Remain vertex: " << remain_num << endl;
     cout << "Remain edges: " << edge_cnt << endl;
-    cout << "Density1(e/v): " << fixed << setprecision(2) << edge_cnt / remain_num << endl;
-    cout << "Density2(e/v2): " << fixed << setprecision(2) << edge_cnt / pow(remain_num, 2) << endl;
+    if (remain_num != 0)
+    {
+        cout << "Density1(e/v): " << fixed << setprecision(2) << edge_cnt / remain_num << endl;
+        cout << "Density2(e/v2): " << fixed << setprecision(2) << edge_cnt / pow(remain_num, 2) << endl;
+    }
 }
 
 inline int compare(int s1, int c1, int s2, int c2){
