@@ -31,19 +31,20 @@ int *t;/////////////////////////////////
 int t_length;
 int *t_index;/////////////////////////////////////////
 
+//顶点信息
 typedef struct Vertex_information{
-    int num_in_c;
-    int config;
-    char is_in_c;
-    int cost;
+    int num_in_c;           //被支配的次数
+    char is_in_c;               //是否已添加到候选解
+    int cost;                       //顶点花费
     int score;						//加入该顶点后，自己及邻居从未支配到支配的顶点数量
-    int time_stamp;
-    int locked;
+    int locked;                     //是否被fix
     int is_in_search;       //是否在搜索集
 }Vertex_information;
 
+//所有顶点信息
 Vertex_information *cs;
 
+//顶点的闭邻居集合
 class NeighborSet
 {
 public:
@@ -58,6 +59,7 @@ public:
         delete neighbors;
         neighbors = nullptr;
     }
+    //判断_v是否在v的闭邻居集合
     bool is_in_set(int _v)
     {
         for (int i = 0; i < neighbor_cnt; ++i) {
@@ -66,8 +68,11 @@ public:
         }
         return false;
     }
+    //顶点
     int v;
+    //v的邻居集合
     int* neighbors;
+    //v的邻居数量
     int neighbor_cnt;
 };
 
@@ -75,66 +80,57 @@ tms start, finish;
 int start_time;
 double real_time;
 
-int seed;
+//程序时间限制，为0时不限制时间
 double time_limit;
-int step;
-int total_step;
-
-long BEST;
 
 int *best_array;
 long best_value;
 
-set<int> tabu_list;
-
 int vertex_num;//顶点个数
 
+//未使用，顶点是否被删除
 int *reduce;
-int reduce_num;
 
+//未支配顶点信息
 int uncover_num;
 int  *uncover_vertex;
 int *uncover_vertex_index;
 int uncover_length;
 
+//剩余顶点信息
 int *remain_vertex;
 int remain_num;
 
+//未使用
 int *cs_vertex;
 int *cs_vertex_index;
 int cs_size;
 
-int locked_num;
-
-
-//int*	vertex[MAXV];//顶点集合
+//顶点二维数组，第一维顶点，第二维顶点的邻居
 int** vertex;													//vertex 2d-array
 int *vertex_neightbourNum;					//neighbornum
 int *vertex_neightbourNum_bak;			//original neighbornum backup
 
-int *best_sol;					//最优解
+int *best_sol;					//最优解，未使用
 int *vertex_weight;		//顶点权值
 
 void init();
 inline int compare(int s1, int c1, int s2, int c2);
-void init_best();
 void add(int c, int locked_add, int init_add);
 void remove(int c, int init_remove);
-int in_tabu(int i);
-int find_best_in_c(int allowTabu);
 void uncov_r_weight_inc();
-void localsearch(int maxStep);
 void update_best_sol();
 int check();
+//初始缩减，处理图边缘顶点
+void init_reduce();
+//超集缩减，处理图内部顶点
 void super_set_reduce();
+//固定顶点
+void lock_vertex(int c, int locked_add);
+//输出信息
 void print_reduce_graph();
 void print_density();
-/**********api start*********/
-//lock vertex
-void lock_vertex(int c, int locked_add);
-void lock_vertex1(int v);
-/**********api end*********/
-
+//释放内存
 void free_all(){
     free(vertex_neightbourNum_bak);
     free(vertex_neightbourNum);
@@ -154,12 +150,12 @@ void free_all(){
         free(vertex[i]);
 }
 
+//处理实例
 int build_instance_massive(char *filename)
 {
     char line[1024];
     char tempstr1[10];
     char tempstr2[10];
-    char	tmp;
     int		v1,v2;
 
     ifstream infile(filename);
@@ -182,8 +178,6 @@ int build_instance_massive(char *filename)
 
     for(size_t i=0;i<vertex_num;i++){
         cs[i].cost=1;
-        cs[i].config=2;
-        cs[i].time_stamp=1;
         cs[i].is_in_c=0;
         cs[i].num_in_c=0;
         cs[i].locked = 0;

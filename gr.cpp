@@ -1,12 +1,7 @@
 #include <iomanip>
 #include "gr.h"
 
-int bms_thre = 1;
-int bms;
-int each_iter=0;
 long current_sol;
-int remove_num1, remove_num2;
-
 
 void buger()
 {
@@ -17,8 +12,6 @@ void init() {
     std::cout << "initializing.." << endl;
     best_value = LONG_MAX; //取最大值
     cs_size = 0;
-    locked_num = 0;
-    tabu_list.clear();
     current_sol = 0;
     t_length = 0;
     uncover_num = 0;
@@ -36,14 +29,12 @@ void simple_lock(int v)
 {
     if (cs[v].locked == 1)
         return;
-    //cs[v].locked = 1;
     lock_vertex(v, 1);
-    //cout << "lock: " << v+1 << endl;
 }
 
 void init_reduce()
 {
-    int i, j, v, kn;
+    int i, j;
     int a, b, c, sum;
     int v_neighbor, neighbor_num;
     memset(reduce, 0, sizeof(reduce));
@@ -124,7 +115,6 @@ void init_reduce()
     {
         if (reduce[i] == 1)
         {
-            //cout << "reduce: " << i + 1 << endl;
             //从图中删除该节点
             neighbor_num = vertex_neightbourNum[i];
             for (j = 0; j < neighbor_num; j++)
@@ -152,7 +142,7 @@ void init_reduce()
     super_set_reduce();
 }
 
-//顶点的被支配次数0->1
+//顶点从未支配中移除
 void remove_from_uncover(int v)
 {
     uncover_num--;
@@ -218,10 +208,8 @@ void lock_vertex(int c, int locked_add)
         if (cs[v_n].is_in_c == 1)
         {
             if (cs[v_n].num_in_c == 2)
-                /*
-                    v_n已经在候选解，c加入候选解后，v_n又被支配了一次
-                */
-                cs[v_n].score += vertex_weight[v_n]; //TODO why? 应该+=vertex_weight[c]?
+                //v_n已经在候选解，c加入候选解后，v_n又被支配了一次
+                cs[v_n].score += vertex_weight[v_n];
             modify_t(v_n);
             continue;
         }
@@ -518,100 +506,6 @@ int check(){ // check if the solution is a correct cover
     return 1;
 }
 
-
-void init_best()
-{
-    int cnt, kn;
-    int i,j,k,l,jj,v;
-    int sr, ct;
-    for(v = 0; v < remain_num; v++)
-    {
-        i = remain_vertex[v];
-        if(cs[i].locked)
-        {
-            cs[i].is_in_c = 1;
-            cs[i].num_in_c++;
-            current_sol += cs[i].cost;
-            kn = vertex_neightbourNum[i];
-            for(j = 0; j < kn; j++)
-                cs[vertex[i][j]].num_in_c++;
-        }
-    }
-    uncover_num = 0;
-    for(v = 0; v < remain_num; v++)
-    {
-        i = remain_vertex[v];
-        if(cs[i].locked)
-            continue;
-        kn = vertex_neightbourNum[i];
-        for(k = 0; k <kn; k++)
-        {
-            j = vertex[i][k];
-            if(cs[j].num_in_c == 0)
-                cs[i].score += 1;
-        }
-        if(cs[i].num_in_c == 0)
-        {
-            cs[i].score += 1;
-            uncover_vertex[uncover_num] = i;
-            uncover_vertex_index[i] = uncover_num;
-            uncover_num++;
-        }
-    }
-    //
-    //wcnf
-    //
-    //printf("%d  ", vertex_num - uncover_num);
-    //printf("\n");
-    free_all();
-    // exit(0);
-    int sst = 0;
-    int uncover_v;
-    while(uncover_num>0){
-        /*
-        if(sst % 2000 == 0)
-        {
-            times(&finish);
-                        double finish_time = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
-                        finish_time = round(finish_time * 100)/100.0;
-                printf("%d %d %f", sst , uncover_num, finish_time);
-                buger();
-        }
-        sst++;*/
-        uncover_v = uncover_vertex[rand()%uncover_num];
-
-        sr = cs[uncover_v].score;
-        ct = cs[uncover_v].cost;
-        best_array[0] = uncover_v;
-        cnt = 1;
-        kn = vertex_neightbourNum[uncover_v];
-        for(v=0;v<kn;v++){
-            j = vertex[uncover_v][v];
-            if(cs[j].is_in_c) continue;
-            //if(cs[j].num_in_c > 0) continue;
-            k=compare(sr,ct,cs[j].score, cs[j].cost);
-            if(sr==INT_MIN||k<0){
-                sr=cs[j].score;
-                ct=cs[j].cost;
-                best_array[0]=j;
-                cnt=1;
-            } else if(k==0){
-                best_array[cnt++]=j;
-            }
-        }
-        if(cnt>0){
-            l=rand()%cnt;
-            add(best_array[l], 1, 0);
-        }
-    }
-    update_best_sol();
-    if(check()==0){
-        printf("initial wrong\n");exit(0);
-    }
-    printf("%ld	%.2f	", best_value, real_time);
-}
-
-
 void add(int c, int locked_add, int init_add){
     int i,j,k,cnt,s, ii, jj, ix,h, l;
     int uk,ck;
@@ -691,9 +585,6 @@ void add(int c, int locked_add, int init_add){
         }
 
 
-        cs[i].config = 1;
-        //if(init_add == 0)
-        //cs[i].config = 2;
         for(l=0;l<vertex_neightbourNum[i];l++)
         {//因为这个变量，变成这个集合的邻居集合
             j=vertex[i][l];
@@ -704,9 +595,6 @@ void add(int c, int locked_add, int init_add){
                 s=j;
                 cnt++;
             }
-            //if(rand()%100 < 50)
-            //if(init_add == 1)
-            cs[j].config = 2;
         }
         if(cs[i].is_in_c)
         {
@@ -795,8 +683,6 @@ void remove(int c, int init_remove){
         t_index[ck] = uk;
         t_index[c] = -1;
     }
-    //if(init_remove == 1)
-    cs[c].config=0;
 
     if( cs[c].num_in_c==1)
     {
@@ -845,8 +731,6 @@ void remove(int c, int init_remove){
             }
             continue;
         }
-        //if(init_remove == 1)
-        cs[i].config = 2;
         for(l=0;l<vertex_neightbourNum[i];l++){
             j=vertex[i][l];
             if(j==c) continue;
@@ -854,9 +738,6 @@ void remove(int c, int init_remove){
                 cnt++;
                 s=j;
             }
-            //if(rand()%100 < 50)
-            //if(init_remove == 1)
-            cs[j].config=2;
         }
         if(cs[i].is_in_c){
             s=i;
@@ -923,89 +804,6 @@ void remove(int c, int init_remove){
 
 }
 
-int in_tabu(int i){
-    return tabu_list.find(i)!=tabu_list.end();
-}
-int state=0;
-
-int find_best_in_c_simp(int allowTabu){
-    int i, maxc,j,k,v;
-
-    int sr=INT_MIN, ct=1;
-    int kn = cs_size;
-    state = 0;
-    for(v=0;v<kn;v++){
-        i = v;
-        i = cs_vertex[i];
-        if(allowTabu&&in_tabu(i))
-            continue;
-        state = 1;
-        k=compare(sr,ct, cs[i].score, cs[i].cost);
-        if(sr==INT_MIN||k<0){
-            sr=cs[i].score;
-            ct=cs[i].cost;
-            //maxc=i;
-            maxc=i;
-        } else if(k==0){
-            if(cs[maxc].time_stamp>cs[i].time_stamp){
-                //maxc=i;
-                maxc=i;
-            }
-        }
-    }
-    return maxc;
-}
-
-int find_best_in_c(int allowTabu){
-    int i, maxc,j,k,v;
-    int sr=INT_MIN, ct=1;
-    int temp_int;
-    int kn,flag;
-    state=0;
-    double r_n = rand()/(RAND_MAX+1.0);
-    //double p = 1.0 / (double)best_sol_found;
-    double p = exp(-each_iter);
-    if(r_n < p)
-    {
-        //kn = cs_size;
-        //bms = INT_MAX;
-        kn = 1024;
-    }
-    else
-    {
-        /*bms = 100;
-        temp_int = bms_thre % cs_size;
-        if(bms < temp_int)
-                bms = temp_int;
-        kn = cs_size;
-        if(kn > bms)
-                        kn = bms;*/
-        kn = 50 + rand()%10;
-    }
-    if(kn > cs_size)
-        kn = cs_size;
-    for(v=0;v<kn;v++){
-        if(cs_size == kn)
-            i = v;
-        else
-            i = rand()%cs_size;
-        i = cs_vertex[i];
-        if(allowTabu&&in_tabu(i)) continue;
-        state=1;
-        k=compare(sr,ct, cs[i].score, cs[i].cost);
-        if(sr==INT_MIN||k<0){
-            sr=cs[i].score;
-            ct=cs[i].cost;
-            maxc=i;
-        } else if(k==0){
-            if(cs[maxc].time_stamp>cs[i].time_stamp){
-                maxc=i;
-            }
-        }
-    }
-    return maxc;
-}
-
 void uncov_r_weight_inc(){
     int i,j,h,v,nn;
     for(v = 0; v < uncover_length; v++)
@@ -1028,7 +826,6 @@ void uncov_r_weight_inc(){
 void update_best_sol(){
     int i,j,v;
     if(current_sol < best_value){
-        each_iter=0;
         best_value = current_sol;
         for(v=0;v<remain_num;v++){
             j = remain_vertex[v];
@@ -1045,54 +842,16 @@ void update_best_sol(){
 }
 
 int main(int argc, char *argv[]){
-    if(argc<3){
+    if(argc<2){
         printf("input wrong\n");
         return 0;
     }
 
     build_instance_massive(argv[1]);
-    //printf("%s	",argv[1]);
-    seed=atoi(argv[2]);
-    time_limit=atof(argv[3]);
-    total_step=INT_MAX;
-
-    srand(seed);
+    time_limit=atof(argv[2]);
 
     init();
     init_reduce();
-    return 0;
-    /*printf("c %s",argv[1]);
-    printf("p cnf %d %d 201\n", remain_num, remain_num*2);
-    for(int i = 0; i < remain_num; i++){
-    int v1 = remain_vertex[i];
-    printf("201 %d ", v1+1);
-    for (int j = 0; j < vertex_neightbourNum[v1]; j++){
-            int v2 = vertex[v1][j];
-            printf("%d ",v2+1);
-    }
-    printf("0\n");
-    }
-
-    for(int i = 0; i < remain_num; i++){
-    int v1 = remain_vertex[i];
-    printf("1 -%d 0\n",v1+1);
-
-    }
-    exit(0);
-    */
-
-
-    times(&start);
-    start_time = start.tms_utime + start.tms_stime;
-    bms = 100;
-
-    init_best();
-
-    localsearch(total_step);
-
-    if(!check()) printf("wrong answer \n");
-    printf("%ld	",best_value);
-    printf("%.2f\n",  real_time);
     free_all();
     return 0;
 }
