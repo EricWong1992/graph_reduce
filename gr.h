@@ -54,6 +54,12 @@ public:
         neighbor_cnt = cs[v].score;
         neighbors = new int[neighbor_cnt];
     }
+    explicit NeighborSet(int _v, int n_cnt)
+    {
+        v = _v;
+        neighbor_cnt = n_cnt;
+        neighbors = new int[neighbor_cnt];
+    }
     ~NeighborSet()
     {
         delete neighbors;
@@ -124,12 +130,15 @@ int check();
 //初始缩减，处理图边缘顶点
 void init_reduce();
 //超集缩减，处理图内部顶点
-void super_set_reduce();
+void superset_reduce();
+//子集缩减
+void subset_reduce();
 //固定顶点
 void lock_vertex(int c, int locked_add);
 //输出信息
 void print_reduce_graph();
 void print_density();
+void print_degree();
 //释放内存
 void free_all(){
     free(vertex_neightbourNum_bak);

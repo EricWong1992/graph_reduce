@@ -39,7 +39,7 @@ void init_reduce()
     int v_neighbor, neighbor_num;
     memset(reduce, 0, sizeof(reduce));
     times(&start);
-    std::cout << "first step--->: init_reduce" << endl;
+    std::cout << "first step--->: init reduce" << endl;
     for (i = 0; i < vertex_num; i++)
     {
         if (vertex_neightbourNum[i] == 1)
@@ -77,14 +77,12 @@ void init_reduce()
                 {
                     reduce[i] = 1;
                     reduce[a] = 1;
-                    //cs[b].locked = 1;
                     simple_lock(b);
                 }
             }
         }
         else if (vertex_neightbourNum[i] == 0)
         {
-            //cs[i].locked = 1;
             simple_lock(i);
         }
         else
@@ -103,7 +101,6 @@ void init_reduce()
                         reduce[vertex[i][j]] = 1;
                     }
                 }
-                //cs[i].locked = 1;
                 simple_lock(i);
             }
         }
@@ -139,7 +136,7 @@ void init_reduce()
     }
     uncover_num = remain_num;
     print_reduce_graph();
-    super_set_reduce();
+    superset_reduce();
 }
 
 //顶点从未支配中移除
@@ -155,6 +152,8 @@ void remove_from_uncover(int v)
 //顶点score值改变，判断加入t还是移出t
 void modify_t(int v)
 {
+    if (cs[v].score == 0)
+        reduce[v] = 1;
     if (cs[v].score == 0 && cs[v].is_in_c == 1 && t_index[v] == -1 && cs[v].locked == 0)
     {
         t[t_length] = v;
@@ -196,14 +195,18 @@ void lock_vertex(int c, int locked_add)
         //	remove_from_uncover(i);
         cs[v_n].num_in_c++;
         if (cs[c].num_in_c == 0)
+        {
             //v_n被支配，修改score
             //c 支配次数 0->1
             cs[v_n].score -= vertex_weight[c];
+            modify_t(v_n);
+        }
         else if (cs[c].num_in_c == 1 && cs[v_n].is_in_c == 1)
         {
             //v_n存在在候选解, 此时v_n的score值为负
             //c 支配次数 1->2
             cs[v_n].score += vertex_weight[c];
+            modify_t(v_n);
         }
         if (cs[v_n].is_in_c == 1)
         {
@@ -257,10 +260,10 @@ void lock_vertex(int c, int locked_add)
     cs[c].num_in_c++;
 }
 
-void super_set_reduce()
+void superset_reduce()
 {
     int iter = 0;
-    std::cout << "second step--->: super set" << endl;
+    std::cout << "second step--->: superset reduce" << endl;
     queue<int> q_searchset;
     for (size_t i = 0; i < vertex_num; i++)
         if (cs[i].num_in_c == 0)
@@ -388,8 +391,105 @@ void super_set_reduce()
         }
     }
     cout << "iter: " << iter << endl;
+    // print_reduce_graph();
+    // print_density();
+    // print_degree();
+    // times(&finish);
+    // double tt = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
+    // tt= round(tt * 100)/100.0;
+    // cout << "Time: " << tt << "s" <<endl;
+    subset_reduce();
+}
+
+void subset_reduce()
+{
+    cout << "third step--->:subset reduce" <<endl;
+    for (size_t i = 0; i < vertex_num; i++)
+    {
+        if (cs[i].num_in_c == 0)
+        {
+            int cnt = 0;
+            for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
+            {
+                int v_n = vertex[i][j];
+                if (cs[v_n].score > 0)
+                {
+                    cnt++;
+                }
+            }
+            //构造所有邻居集合
+            vector<NeighborSet*> sets(cnt);
+            sets[0] = new NeighborSet(i, cnt);
+            int cnt1 = 0;
+            for (size_t j = 0; j < vertex_neightbourNum[i] && cnt1 < cnt; j++)
+            {
+                int v_n = vertex[i][j];
+                if (cs[v_n].score > 0)
+                {
+                    sets[0]->neighbors[cnt1++] = v_n;
+                    sets[cnt1] = new NeighborSet(v_n);
+                    int cnt2 = 0;
+                    for (size_t k = 0; k < vertex_neightbourNum[v_n] && cnt2 < cs[v_n].score; k++)
+                    {
+                        int v_n_n = vertex[v_n][k];
+                        if (cs[v_n_n].num_in_c == 0)
+                        {
+                            sets[cnt2++]->neighbors;
+                        }
+                    }
+                }
+            }
+            //两层循环遍历删除子集顶点
+            for (size_t j = 0; j < sets.size(); j++)
+            {
+                for (size_t k = j + 1; k < sets.size(); k++)
+                {
+                    auto set_a = sets[j];
+                    auto set_b = sets[k];
+                    //外层节点已经被删除，打断内部for循环
+                    if (reduce[set_a->v] == 1)
+                    {
+                        break;
+                    }
+                    //内部节点已经被删除，跳过本次内部循环
+                    if (reduce[set_b->v] == 1)
+                    {
+                        continue;
+                    }
+                    //如果set_b元素数量比set_a多，交换指针，set_b始终是待判断子集的指针
+                    if (set_a->neighbor_cnt < set_b->neighbor_cnt)
+                    {
+                        auto temp = set_b;
+                        set_b = set_a;
+                        set_a = temp;
+                    }
+                    //判断set_b是不是set_a的子集
+                    bool is_subset = true;
+                    for (size_t t = 0; t < set_b->neighbor_cnt; t++)
+                    {
+                        if (!set_a->is_in_set(set_b->neighbors[t]))
+                        {
+                            is_subset = false;
+                            break;
+                        }
+                    }
+                    if (is_subset)
+                    {
+                        //set_b是set_a的子集，把set_b的头元素即v删除
+                        reduce[set_b->v] = 1;
+                    }
+                }
+            }
+            //free memory
+            for (size_t j = 0; j < sets.size(); j++)
+            {
+                delete sets[j];
+            }
+        }
+    }
     print_reduce_graph();
     print_density();
+    print_degree();
     times(&finish);
     double tt = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
     tt= round(tt * 100)/100.0;
@@ -405,27 +505,31 @@ void print_reduce_graph()
     int score_lock_0 = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
-        if (cs[i].locked == 1)
+        if  (cs[i].locked == 1)
         {
             locked_num++;
             if (cs[i].score == 0)
             {
                 score_lock_0++;
             }
+            continue;
         }
-        if (cs[i].num_in_c == 0)
-            uncover_num++;
-        if (cs[i].score == 0)
+        if (reduce[i] == 1)
+        {
             remove_num++;
-        else
-            if (cs[i].locked != 1)
-                remain_num++;
+            continue;
+        }
+        remain_num++;
+        if (cs[i].num_in_c == 0)
+        {
+            uncover_num++;
+        }
     }
-    cout << "score_lock_0: " << score_lock_0 << endl;
-    if (remain_num + locked_num + remove_num == vertex_num)
-        cout << "check ok" << endl;
-    else
-        cout << vertex_num - remain_num - locked_num - remove_num << endl;
+//    cout << "score_lock_0: " << score_lock_0 << endl;
+//    if (remain_num + locked_num + remove_num == vertex_num)
+//        cout << "check ok" << endl;
+//    else
+//        cout << vertex_num - remain_num - locked_num - remove_num << endl;
     std::cout << "Total Vertex: " << vertex_num << endl;
     std::cout << "Delete Vertex: " << remove_num << endl;
     std::cout << "Fixed Vertex: " << locked_num << endl;
@@ -437,21 +541,34 @@ void print_reduce_graph()
 void print_density()
 {
     int edge_cnt = 0;
+    std::ofstream openfile("abc", std::ios::out);
     for (size_t i = 0; i < vertex_num; i++)
     {
-        if (cs[i].score == 0 || cs[i].locked == 1)
-        {
+        if (cs[i].locked == 1 || reduce[i] == 1)
             continue;
-        }
-        for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
-        {
+        for (int j = 0; j < vertex_neightbourNum[i]; ++j) {
             int v_n = vertex[i][j];
-            if (v_n > i && cs[v_n].score != 0 && cs[v_n].locked != 1)
+            if (v_n > i && cs[v_n].locked != 1 && reduce[v_n] != 1)
             {
                 edge_cnt++;
+                openfile << "e " << i << " " << v_n <<endl;
             }
         }
+
+//        if (cs[i].score == 0 || cs[i].locked == 1)
+//        {
+//            continue;
+//        }
+//        for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
+//        {
+//            int v_n = vertex[i][j];
+//            if (v_n > i && cs[v_n].score != 0 && cs[v_n].locked != 1)
+//            {
+//                edge_cnt++;
+//            }
+//        }
     }
+    openfile.close();
     cout << "Remain vertex: " << remain_num << endl;
     cout << "Remain edges: " << edge_cnt << endl;
     cout << "Density1: " << fixed << setprecision(3) << edge_num *1.0 / vertex_num / (vertex_num - 1) * 100 << "%" << endl;
@@ -463,6 +580,38 @@ void print_density()
     {
         cout << "Density2: 0" << endl;
     }
+}
+
+void print_degree()
+{
+    int d1 = 0, d2 = 0, d3 = 0;
+    for (size_t i = 0; i < vertex_num; i++)
+    {
+        if (cs[i].score == 0 || cs[i].locked == 1)
+        {
+            continue;
+        }
+        int n_cnt = 0;
+        for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
+        {
+            int v_n = vertex[i][j];
+            if (cs[v_n].score != 0 && cs[v_n].locked != 1)
+            {
+                n_cnt++;
+            }
+        }
+        if (n_cnt == 1)
+        {
+            d1++;
+        }
+        else if (n_cnt == 2)
+            d2++;
+        else if (n_cnt == 3)
+            d3++;
+    }
+    cout << "d1:" << d1 << endl;
+    cout << "d2:" << d2 << endl;
+    cout << "d3:" << d3 << endl;
 }
 
 inline int compare(int s1, int c1, int s2, int c2){
