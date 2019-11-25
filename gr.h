@@ -39,6 +39,7 @@ typedef struct Vertex_information{
     int score;						//加入该顶点后，自己及邻居从未支配到支配的顶点数量
     int locked;                     //是否被fix
     int is_in_search;       //是否在搜索集
+    int is_exclude;         //是否排除出最优解。子集缩减排除
 }Vertex_information;
 
 //所有顶点信息
@@ -51,20 +52,13 @@ public:
     explicit NeighborSet(int _v)
     {
         v = _v;
-        neighbor_cnt = cs[v].score;
-        neighbors = new int[neighbor_cnt];
     }
     explicit NeighborSet(int _v, int n_cnt)
     {
         v = _v;
-        neighbor_cnt = n_cnt;
-        neighbors = new int[neighbor_cnt];
+        neighbors = vector<int>(n_cnt);
     }
-    ~NeighborSet()
-    {
-        delete neighbors;
-        neighbors = nullptr;
-    }
+    ~NeighborSet()= default;
     //判断_v是否在v的闭邻居集合
     bool is_in_set(int _v)
     {
@@ -77,23 +71,17 @@ public:
     //添加邻居顶点, 用于构建闭邻居集合
     void addNeighbor(int _v)
     {
-        //邻居元素添加到上限，也是出错了
-        if (_index + 1 == neighbor_cnt)
-        {
-            cout << "add vertex error" << endl;
-            return;
-        }
-        neighbors[_index++] = v;
+        neighbors.push_back(_v);
+    }
+    int getNeighborCnt()
+    {
+        return neighbors.size();
     }
     //顶点
     int v;
     //v的邻居集合
-    int* neighbors;
+    vector<int> neighbors;
     //v的邻居数量
-    int neighbor_cnt;
-private:
-    //当前添加的邻居索引, _index+1为已添加的邻居数量
-    int _index = 0;
 };
 
 tms start, finish;
@@ -133,11 +121,9 @@ int *vertex_neightbourNum_bak;			//original neighbornum backup
 
 int *best_sol;					//最优解，未使用
 int *vertex_weight;		//顶点权值
+string filename;        //实例文件名
 
 void init();
-inline int compare(int s1, int c1, int s2, int c2);
-void add(int c, int locked_add, int init_add);
-void remove(int c, int init_remove);
 void uncov_r_weight_inc();
 void update_best_sol();
 int check();
@@ -174,15 +160,17 @@ void free_all(){
 }
 
 //处理实例
-int build_instance_massive(char *filename)
+int build_instance_massive(char *file_name)
 {
     char line[1024];
     char tempstr1[10];
     char tempstr2[10];
     int		v1,v2;
 
-    ifstream infile(filename);
-    cout << "processing " << filename << endl;
+    ifstream infile(file_name);
+    filename = file_name;
+
+    cout << "processing " << file_name << endl;
     /*** build problem data structures of the instance ***/
     infile.getline(line,1024);
     sscanf(line, "%s %s %d %d", tempstr1,tempstr2, &vertex_num, &edge_num);
@@ -205,6 +193,7 @@ int build_instance_massive(char *filename)
         cs[i].num_in_c=0;
         cs[i].locked = 0;
         cs[i].is_in_search = 0;
+        cs[i].is_exclude = 0;
         vertex_neightbourNum[i]=0;
         best_sol[i]=0;
         t[i] = 0;

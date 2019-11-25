@@ -262,7 +262,6 @@ void lock_vertex(int c, int locked_add)
 
 void superset_reduce()
 {
-    int iter = 0;
     std::cout << "second step--->: superset reduce" << endl;
     queue<int> q_searchset;
     for (size_t i = 0; i < vertex_num; i++)
@@ -278,7 +277,6 @@ void superset_reduce()
         tt = round(tt * 100) / 100.0;
         if (time_limit != 0 && tt > time_limit)
             break;
-        iter++;
         int v = q_searchset.front();
         q_searchset.pop();
         cs[v].is_in_search = 0;
@@ -390,7 +388,6 @@ void superset_reduce()
             delete max_set;
         }
     }
-    cout << "iter: " << iter << endl;
     // print_reduce_graph();
     // print_density();
     // print_degree();
@@ -408,11 +405,11 @@ void subset_reduce()
     {
         if (cs[i].num_in_c == 0)
         {
-            int cnt = 1;    //i本身也要存在集合里面
+            int cnt = 1;    //i本身也要存在集合里面, 记录i的闭邻居集合有多少元素
             for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
             {
                 int v_n = vertex[i][j];
-                if (cs[v_n].score > 0)
+                if (cs[v_n].score > 0 && cs[v_n].is_exclude != 1)
                 {
                     cnt++;
                 }
@@ -473,9 +470,9 @@ void subset_reduce()
                     }
                     //判断set_b是不是set_a的子集
                     bool is_subset = true;
-                    for (size_t t = 0; t < set_b->neighbor_cnt; t++)
+                    for (size_t s = 0; s < set_b->neighbor_cnt; s++)
                     {
-                        if (!set_a->is_in_set(set_b->neighbors[t]))
+                        if (!set_a->is_in_set(set_b->neighbors[s]))
                         {
                             is_subset = false;
                             break;
@@ -484,14 +481,15 @@ void subset_reduce()
                     if (is_subset)
                     {
                         //set_b是set_a的子集，把set_b的头元素即v删除
-                        reduce[set_b->v] = 1;
+                        // reduce[set_b->v] = 1;
+                        cs[set_b->v].is_exclude = 1;
                     }
                 }
             }
             //free memory
-            for (size_t j = 0; j < sets.size(); j++)
+            for (auto & set : sets)
             {
-                delete sets[j];
+                delete set;
             }
         }
     }
@@ -522,7 +520,7 @@ void print_reduce_graph()
             }
             continue;
         }
-        if (reduce[i] == 1)
+        if (reduce[i] == 1 || cs[i].score == 0)
         {
             remove_num++;
             continue;
@@ -549,32 +547,35 @@ void print_reduce_graph()
 void print_density()
 {
     int edge_cnt = 0;
-    std::ofstream openfile("abc", std::ios::out);
+    string new_file_name = filename + "_r";
+    std::ofstream openfile(new_file_name, std::ios::out);
     for (size_t i = 0; i < vertex_num; i++)
     {
-        if (cs[i].locked == 1 || reduce[i] == 1)
+        if (cs[i].locked == 1 || reduce[i] == 1 || cs[i].is_exclude == 1)
             continue;
+
+        bool is_output_v = false;
+        if (cs[i].num_in_c == 0)
+        {
+            openfile << i + 1 << " " << i + 1;
+            is_output_v = true;
+        }
         for (int j = 0; j < vertex_neightbourNum[i]; ++j) {
             int v_n = vertex[i][j];
-            if (v_n > i && cs[v_n].locked != 1 && reduce[v_n] != 1)
+            if (v_n > i && cs[v_n].locked != 1 && reduce[v_n] != 1 && cs[v_n].is_exclude != 1 && cs[v_n].num_in_c == 0)
             {
+                if (!is_output_v)
+                {
+                    is_output_v = true;
+                    openfile << i+1 ;
+                }
                 edge_cnt++;
-                openfile << "e " << i << " " << v_n <<endl;
+                //openfile << "e " << i << " " << v_n <<endl;
+                openfile << " " <<  v_n + 1;
             }
         }
-
-//        if (cs[i].score == 0 || cs[i].locked == 1)
-//        {
-//            continue;
-//        }
-//        for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
-//        {
-//            int v_n = vertex[i][j];
-//            if (v_n > i && cs[v_n].score != 0 && cs[v_n].locked != 1)
-//            {
-//                edge_cnt++;
-//            }
-//        }
+        if (is_output_v)
+            openfile << endl;
     }
     openfile.close();
     cout << "Remain vertex: " << remain_num << endl;
@@ -595,7 +596,7 @@ void print_degree()
     int d1 = 0, d2 = 0, d3 = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
-        if (cs[i].score == 0 || cs[i].locked == 1)
+        if (cs[i].score == 0 || cs[i].locked == 1 || cs[i].is_exclude == 1)
         {
             continue;
         }
@@ -603,7 +604,8 @@ void print_degree()
         for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
         {
             int v_n = vertex[i][j];
-            if (cs[v_n].score != 0 && cs[v_n].locked != 1)
+            //子集缩减把顶点直接从未支配中去掉，只用score!=0的点不能完全覆盖
+            if (reduce[i] != 1 && cs[v_n].score != 0 && cs[v_n].locked != 1 && cs[v_n].is_exclude != 1)
             {
                 n_cnt++;
             }
@@ -620,20 +622,6 @@ void print_degree()
     cout << "d1:" << d1 << endl;
     cout << "d2:" << d2 << endl;
     cout << "d3:" << d3 << endl;
-}
-
-inline int compare(int s1, int c1, int s2, int c2){
-    if(c1==c2) {
-        if(s1>s2) return 1;
-        else if(s1==s2) return 0;
-        else return -1;
-    }
-    long long t1=s1, t2=s2;
-    t1=t1*c2;
-    t2=t2*c1;
-    if(t1>t2) return 1;
-    else if(t1==t2) return 0;
-    else return -1;
 }
 
 int check(){ // check if the solution is a correct cover
@@ -661,304 +649,6 @@ int check(){ // check if the solution is a correct cover
             return 0;
     }
     return 1;
-}
-
-void add(int c, int locked_add, int init_add){
-    int i,j,k,cnt,s, ii, jj, ix,h, l;
-    int uk,ck;
-    cs[c].is_in_c=1;
-    current_sol += cs[c].cost;
-    if(locked_add == 1)
-    {
-        cs_vertex[cs_size] = c;
-        cs_vertex_index[c] = cs_size;
-        cs_size++;
-    }
-
-    cs[c].score=-cs[c].score;
-    if(cs[c].score == 0 && t_index[c] == -1 && cs[c].locked == 0)
-    {
-        t[t_length] = c;
-        t_index[c] = t_length;
-        t_length++;
-    }
-
-    if( cs[c].num_in_c==0)
-    {
-        uncover_num--;
-        if(init_add == 0)
-        {
-            uk = uncover_vertex_index[c];
-            ck = uncover_vertex[uncover_num];
-            uncover_vertex[uk] = ck;
-            uncover_vertex_index[ck] = uk;
-        }
-    }
-    for(h=0;h<vertex_neightbourNum[c]; h++)
-    {//C集合中每一个变量h   处理未覆盖集合
-        i=vertex[c][h];
-
-        if(cs[i].num_in_c==0)
-        {
-            uncover_num--;
-            if(init_add == 0)
-            {
-                uk = uncover_vertex_index[i];
-                ck = uncover_vertex[uncover_num];
-                uncover_vertex[uk] = ck;
-                uncover_vertex_index[ck] = uk;
-            }
-        }
-
-        cs[i].num_in_c++;/////////////////////
-        cnt=0;
-        if( cs[c].num_in_c==0){
-            cs[i].score-=vertex_weight[c];
-        }    else if( cs[c].num_in_c==1&& cs[i].is_in_c==1){
-            cs[i].score+=vertex_weight[c];
-        }
-
-
-        if(cs[i].is_in_c && init_add == 0)
-        {
-            if(cs[i].num_in_c == 2)
-                cs[i].score += vertex_weight[i];
-            if(cs[i].score == 0 && t_index[i] == -1 && cs[i].locked == 0)
-            {
-                t[t_length] = i;
-                t_index[i] = t_length;
-                t_length++;
-            }
-            else if(t_index[i] != -1 && cs[i].score != 0)
-            {
-                t_length--;
-                uk = t_index[i];
-                ck = t[t_length];
-                t[uk] = ck;
-                t_index[ck] = uk;
-                t_index[i] = -1;
-            }
-            continue;
-        }
-
-
-        for(l=0;l<vertex_neightbourNum[i];l++)
-        {//因为这个变量，变成这个集合的邻居集合
-            j=vertex[i][l];
-
-            if(j==c) continue;
-            if(cs[j].is_in_c)
-            {
-                s=j;
-                cnt++;
-            }
-        }
-        if(cs[i].is_in_c)
-        {
-            s=i;
-            cnt++;
-        }
-
-        if(cnt==0){ // c is the first one covering this row in C
-            cs[i].score-=vertex_weight[i];////////////////
-            for(l=0; l<vertex_neightbourNum[i]; l++){
-                j=vertex[i][l];
-                if(j==c)
-                    continue;
-                cs[j].score-=vertex_weight[i];//候选解中不覆盖这个变量，所以当覆盖之后，所以以前覆盖这个变量的集合score取值必须减去这个变量
-                if(cs[j].score == 0 && cs[j].is_in_c == 1 && t_index[j] == -1 && cs[j].locked == 0)
-                {
-                    t[t_length] = j;
-                    t_index[j] = t_length;
-                    t_length++;
-                }
-                else if(t_index[j] != -1 && cs[j].score != 0)
-                {
-                    t_length--;
-                    uk = t_index[j];
-                    ck = t[t_length];
-                    t[uk] = ck;
-                    t_index[ck] = uk;
-                    t_index[j] = -1;
-                }
-            }
-        } else if(cnt==1){// c is second one covering this row in C
-            cs[s].score+=vertex_weight[i];//候选解中覆盖这个变量一次，所以加入这个集合以后，所以以前覆盖这个变量的集合score取值必须加上这个变量
-            if(cs[s].score == 0 && cs[s].is_in_c == 1 && t_index[s] == -1 && cs[s].locked == 0)
-            {
-                t[t_length] = s;
-                t_index[s] = t_length;
-                t_length++;
-            }
-            else if(t_index[s] != -1 && cs[s].score != 0)
-            {
-                t_length--;
-                uk = t_index[s];
-                ck = t[t_length];
-                t[uk] = ck;
-                t_index[ck] = uk;
-                t_index[s] = -1;
-            }
-        }
-
-        if(cs[i].score == 0 && cs[i].is_in_c == 1 && t_index[i] == -1 && cs[i].locked == 0)
-        {
-            t[t_length] = i;
-            t_index[i] = t_length;
-            t_length++;
-        }
-        else if(t_index[i] != -1 && cs[i].score != 0)
-        {
-            t_length--;
-            uk = t_index[i];
-            ck = t[t_length];
-            t[uk] = ck;
-            t_index[ck] = uk;
-            t_index[i] = -1;
-        }
-    }
-    cs[c].num_in_c++;
-}
-
-void remove(int c, int init_remove){
-    int uk, ck;
-    cs[c].is_in_c=0;
-    current_sol -= cs[c].cost;
-    cs_size--;
-    int kn = cs_vertex_index[c];
-    int bn = cs_vertex[cs_size];
-    cs_vertex[kn] = bn;
-    cs_vertex_index[bn] = kn;
-
-    cs[c].score=-cs[c].score;
-    if(cs[c].score == 0 && t_index[c] != -1)
-    {
-        t_length--;
-        uk = t_index[c];
-        ck = t[t_length];
-        t[uk] = ck;
-        t_index[ck] = uk;
-        t_index[c] = -1;
-    }
-
-    if( cs[c].num_in_c==1)
-    {
-        //uncover_vertex[uncover_num] = c;//////////////////////////
-        // uncover_vertex_index[c] = uncover_num;
-        uncover_num++;
-    }
-
-    int i,j,k,cnt,s,h,l;
-    for(h=0; h<vertex_neightbourNum[c]; h++){
-        i=vertex[c][h];
-        if(cs[i].num_in_c==1)
-        {
-            //uncover_vertex[uncover_num] = i;
-            //uncover_vertex_index[c] = uncover_num;
-            //uncover_vertex_index[i] = uncover_num;
-            uncover_num++;
-        }
-        cs[i].num_in_c--;
-        cnt=0;
-        if( cs[c].num_in_c==2&& cs[i].is_in_c==1){
-            cs[i].score-=vertex_weight[c];
-        }    else if( cs[c].num_in_c==1){
-            cs[i].score+=vertex_weight[c];
-        }
-
-
-        if(cs[i].is_in_c && init_remove == 0)
-        {
-            if(cs[i].num_in_c == 1)
-                cs[i].score -= vertex_weight[i];
-            if(cs[i].score == 0 && t_index[i] == -1 && cs[i].locked == 0)
-            {
-                t[t_length] = i;
-                t_index[i] = t_length;
-                t_length++;
-            }
-            else if(t_index[i] != -1 && cs[i].score != 0)
-            {
-                t_length--;
-                uk = t_index[i];
-                ck = t[t_length];
-                t[uk] = ck;
-                t_index[ck] = uk;
-                t_index[i] = -1;
-            }
-            continue;
-        }
-        for(l=0;l<vertex_neightbourNum[i];l++){
-            j=vertex[i][l];
-            if(j==c) continue;
-            if(cs[j].is_in_c){
-                cnt++;
-                s=j;
-            }
-        }
-        if(cs[i].is_in_c){
-            s=i;
-            cnt++;
-        }
-        if(cnt==0){
-            cs[i].score+=vertex_weight[i];////////////////
-            for(l=0;l<vertex_neightbourNum[i];l++){
-                j=vertex[i][l];
-                if(j==c)
-                    continue;
-                cs[j].score+=vertex_weight[i];
-                if(cs[j].score == 0 && cs[j].is_in_c == 1 && t_index[j] == -1 && cs[j].locked == 0)
-                {
-                    t[t_length] = j;
-                    t_index[j] = t_length;
-                    t_length++;
-                }
-                else if(t_index[j] != -1 && cs[j].score != 0)
-                {
-                    t_length--;
-                    uk = t_index[j];
-                    ck = t[t_length];
-                    t[uk] = ck;
-                    t_index[ck] = uk;
-                    t_index[j] = -1;
-                }
-            }
-        } else if(cnt==1){
-            cs[s].score-=vertex_weight[i];
-            if(cs[s].score == 0 && cs[s].is_in_c == 1 && t_index[s] == -1 && cs[s].locked == 0)
-            {
-                t[t_length] = s;
-                t_index[s] = t_length;
-                t_length++;
-            }
-            else if(t_index[s] != -1 && cs[s].score != 0)
-            {
-                t_length--;
-                uk = t_index[s];
-                ck = t[t_length];
-                t[uk] = ck;
-                t_index[ck] = uk;
-                t_index[s] = -1;
-            }
-        }
-        if(cs[i].score == 0 && cs[i].is_in_c == 1 && t_index[i] == -1 && cs[i].locked == 0)
-        {
-            t[t_length] = i;
-            t_index[i] = t_length;
-            t_length++;
-        }
-        else if(t_index[i] != -1 && cs[i].score != 0)
-        {
-            t_length--;
-            uk = t_index[i];
-            ck = t[t_length];
-            t[uk] = ck;
-            t_index[ck] = uk;
-            t_index[i] = -1;
-        }
-    }
-    cs[c].num_in_c--;
-
 }
 
 void uncov_r_weight_inc(){
