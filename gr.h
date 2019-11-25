@@ -74,12 +74,26 @@ public:
         }
         return false;
     }
+    //添加邻居顶点, 用于构建闭邻居集合
+    void addNeighbor(int _v)
+    {
+        //邻居元素添加到上限，也是出错了
+        if (_index + 1 == neighbor_cnt)
+        {
+            cout << "add vertex error" << endl;
+            return;
+        }
+        neighbors[_index++] = v;
+    }
     //顶点
     int v;
     //v的邻居集合
     int* neighbors;
     //v的邻居数量
     int neighbor_cnt;
+private:
+    //当前添加的邻居索引, _index+1为已添加的邻居数量
+    int _index = 0;
 };
 
 tms start, finish;

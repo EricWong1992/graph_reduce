@@ -408,7 +408,7 @@ void subset_reduce()
     {
         if (cs[i].num_in_c == 0)
         {
-            int cnt = 0;
+            int cnt = 1;    //i本身也要存在集合里面
             for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
             {
                 int v_n = vertex[i][j];
@@ -420,21 +420,29 @@ void subset_reduce()
             //构造所有邻居集合
             vector<NeighborSet*> sets(cnt);
             sets[0] = new NeighborSet(i, cnt);
+            sets[0]->addNeighbor(i);
             int cnt1 = 0;
             for (size_t j = 0; j < vertex_neightbourNum[i] && cnt1 < cnt; j++)
             {
                 int v_n = vertex[i][j];
                 if (cs[v_n].score > 0)
                 {
-                    sets[0]->neighbors[cnt1++] = v_n;
+                    sets[0]->addNeighbor(v_n);
+                    cnt1++;
                     sets[cnt1] = new NeighborSet(v_n);
                     int cnt2 = 0;
+                    if (cs[v_n].num_in_c == 0)
+                    {
+                        sets[cnt1]->addNeighbor(v_n);
+                        cnt2++;
+                    }
                     for (size_t k = 0; k < vertex_neightbourNum[v_n] && cnt2 < cs[v_n].score; k++)
                     {
                         int v_n_n = vertex[v_n][k];
                         if (cs[v_n_n].num_in_c == 0)
                         {
-                            sets[cnt2++]->neighbors;
+                            sets[cnt1]->addNeighbor(v_n_n);
+                            cnt2++;
                         }
                     }
                 }
