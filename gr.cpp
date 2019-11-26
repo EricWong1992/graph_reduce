@@ -239,6 +239,7 @@ void lock_vertex(int c, int locked_add)
         {
             //c是i的邻居里面第一个加入候选解的
             cs[v_n].score -= vertex_weight[v_n];
+            modify_t(v_n);
             for (size_t l = 0; l < vertex_neightbourNum[v_n]; l++)
             {
                 int j = vertex[v_n][l];
@@ -402,6 +403,7 @@ void superset_reduce()
     // tt= round(tt * 100)/100.0;
     // cout << "Time: " << tt << "s" <<endl;
     subset_reduce();
+//    check();
 }
 
 void subset_reduce()
@@ -415,7 +417,8 @@ void subset_reduce()
             for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
             {
                 int v_n = vertex[i][j];
-                if (cs[v_n].score > 0 && cs[v_n].is_exclude != 1)
+                // && cs[v_n].is_exclude != 1
+                if (cs[v_n].score > 0 )
                 {
                     cnt++;
                 }
@@ -428,7 +431,8 @@ void subset_reduce()
             for (size_t j = 0; j < vertex_neightbourNum[i] && cnt1 < cnt; j++)
             {
                 int v_n = vertex[i][j];
-                if (cs[v_n].score > 0 && cs[v_n].is_exclude != 1)
+                // && cs[v_n].is_exclude != 1
+                if (cs[v_n].score > 0 )
                 {
                     sets[0]->addNeighbor(v_n);
                     cnt1++;
@@ -442,7 +446,8 @@ void subset_reduce()
                     for (size_t k = 0; k < vertex_neightbourNum[v_n] && cnt2 < cs[v_n].score; k++)
                     {
                         int v_n_n = vertex[v_n][k];
-                        if (cs[v_n_n].num_in_c == 0 && cs[v_n_n].is_exclude != 1)
+                        // && cs[v_n_n].is_exclude != 1
+                        if (cs[v_n_n].num_in_c == 0)
                         {
                             sets[cnt1]->addNeighbor(v_n_n);
                             cnt2++;
@@ -489,6 +494,10 @@ void subset_reduce()
                         //set_b是set_a的子集，把set_b的头元素即v删除
                         // reduce[set_b->v] = 1;
                         cs[set_b->v].is_exclude = 1;
+                        // cout << "set_a:" << endl;
+                        // set_a->dump();
+                        // cout << "set_b:" << endl;
+                        // set_b->dump();
                     }
                 }
             }
@@ -511,25 +520,27 @@ void subset_reduce()
 
 void print_reduce_graph()
 {
-    int locked_num = 0;
-    int uncover_num = 0;
-    int remove_num = 0;
-    remain_num = 0;
-    int score_lock_0 = 0;
+    int locked_num = 0;         //确定在最优解的顶点数量
+    int uncover_num = 0;        //经过两次reduce后未支配顶点数量
+    int remove_num = 0;         //确定删除的顶点数量
+    remain_num = 0;                 //经过两次reduce后剩余顶点数量
+    int forbid_add_num = 0;     //subset_reduce确定一定不再最优解的顶点数量
+    int candidate_num = 0;      //两次reduce后筛选的可能在候选解的数量(需要bb处理的数量)
     for (size_t i = 0; i < vertex_num; i++)
     {
         if  (cs[i].locked == 1)
         {
             locked_num++;
-            if (cs[i].score == 0)
-            {
-                score_lock_0++;
-            }
             continue;
         }
         if (reduce[i] == 1 || cs[i].score == 0)
         {
             remove_num++;
+            continue;
+        }
+        if (cs[i].is_exclude == 1)
+        {
+            forbid_add_num++;
             continue;
         }
         remain_num++;
@@ -538,16 +549,12 @@ void print_reduce_graph()
             uncover_num++;
         }
     }
-//    cout << "score_lock_0: " << score_lock_0 << endl;
-//    if (remain_num + locked_num + remove_num == vertex_num)
-//        cout << "check ok" << endl;
-//    else
-//        cout << vertex_num - remain_num - locked_num - remove_num << endl;
     std::cout << "Total Vertex: " << vertex_num << endl;
     std::cout << "Delete Vertex: " << remove_num << endl;
     std::cout << "Fixed Vertex: " << locked_num << endl;
     std::cout << "Uncover Vertex: " << uncover_num << endl;
     std::cout << "Remain Vertex:" << remain_num << endl;
+    std::cout << "Forbid Add: " << forbid_add_num << endl;
     std::cout << "Percent: " <<  fixed << setprecision(2) << remain_num * 1.0 / vertex_num * 100 << "%" << endl;
 }
 
@@ -556,18 +563,21 @@ void print_density(int idx)
     int edge_cnt = 0;
     string new_file_name = filename + "_r" + to_string(idx);
     std::ofstream openfile(new_file_name, std::ios::out);
+    int cnt = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
         if (cs[i].locked == 1 || reduce[i] == 1 || cs[i].is_exclude == 1)
             continue;
-
         bool is_output_v = false;
         for (int j = 0; j < vertex_neightbourNum[i]; ++j) {
             int v_n = vertex[i][j];
-            if (cs[v_n].locked != 1 && reduce[v_n] != 1 && cs[v_n].is_exclude != 1 && cs[v_n].num_in_c == 0)
-            {
+            if (cs[v_n].locked == 1 || reduce[v_n] == 1 || cs[v_n].is_exclude == 1)
+                continue;
+            // if (cs[v_n].num_in_c == 0)
+            // {
                 if (!is_output_v)
                 {
+                    cnt++;
                     if (cs[i].num_in_c == 0)
                     {
                         openfile << i + 1 << " " << i+1;
@@ -579,23 +589,24 @@ void print_density(int idx)
                 }
                 edge_cnt++;
                 openfile << " " <<  v_n + 1;
-            }
+            // }
         }
         if (is_output_v)
             openfile << endl;
     }
     openfile.close();
-    cout << "Remain vertex: " << remain_num << endl;
-    cout << "Remain edges: " << edge_cnt << endl;
-    cout << "Density1: " << fixed << setprecision(3) << edge_num *1.0 / vertex_num / (vertex_num - 1) * 100 << "%" << endl;
-    if (remain_num != 0)
-    {
-        cout << "Density2: " << fixed << setprecision(3) << edge_cnt * 1.0 / remain_num / (remain_num - 1) * 100 << "%" << endl;
-    }
-    else
-    {
-        cout << "Density2: 0" << endl;
-    }
+    cout << "candidate: " << cnt << endl;
+//    cout << "Remain vertex: " << remain_num << endl;
+//    cout << "Remain edges: " << edge_cnt << endl;
+//    cout << "Density1: " << fixed << setprecision(3) << edge_num *1.0 / vertex_num / (vertex_num - 1) * 100 << "%" << endl;
+//    if (remain_num != 0)
+//    {
+//        cout << "Density2: " << fixed << setprecision(3) << edge_cnt * 1.0 / remain_num / (remain_num - 1) * 100 << "%" << endl;
+//    }
+//    else
+//    {
+//        cout << "Density2: 0" << endl;
+//    }
 }
 
 void print_degree()
@@ -633,39 +644,63 @@ void print_degree()
 
 int check(){ // check if the solution is a correct cover
     cout << "checking.." << endl;
-    set<int> remain_v;
+    int cnt = 0;
+    vector<int> candidate;
     for (size_t i = 0; i < vertex_num; i++)
     {
-        if (cs[i].locked == 1 || reduce[i] == 1 || cs[i].is_exclude == 1 || cs[i].score == 0)
+        if (cs[i].locked == 1 || reduce[i] == 1 || cs[i].is_exclude == 1)
         {
             continue;
         }
-        remain_v.insert(i);
+        cnt++;
+        candidate.push_back(i);
     }
+    
+    cout << "candidate: " << cnt <<endl;
+    int candidate_size = candidate.size();
     while(!is_all_dominated())
     {
-        // set<int>::iterator max_score_it;
-        int max_score_v = 0;
-        int score = 0;
-        for(auto & i: remain_v)
+        int max_v = 0;
+        int max_score = 0;
+        int index = 0;
+        for (size_t i = 0; i < candidate_size; i++)
         {
-            if (cs[i].score > score)
+            if (cs[candidate[i]].score > max_score)
             {
-                max_score_v = i;
-                score = cs[i].score;
+                max_score = cs[candidate[i]].score;
+                max_v = candidate[i];
+                index = i;
             }
         }
-        remain_v.erase(max_score_v);
-        lock_vertex(max_score_v, 1);
+        if (max_score > 0)
+        {
+            lock_vertex(max_v, 1);
+            //lock过的顶点从candidate中删除
+            candidate[index] = candidate[candidate_size - 1];
+            candidate_size--;
+        } else
+        {
+            break;
+        }
     }
-    int cnt = 0;
+    cnt = 0;
+    int cnt1 = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
         if (cs[i].locked == 1)
         {
             cnt++;
         }
+        if (cs[i].num_in_c == 0)
+        {
+            cout << i + 1 << endl;
+            cnt1++;
+        }
     }
+    if (cnt1 == 0)
+        cout << "All dominated!" << endl;
+    else
+        cout << "Undominated: " << cnt1 << endl;
     cout << "lock: " << cnt << endl;
     return 1;
 }

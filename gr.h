@@ -73,9 +73,19 @@ public:
     {
         neighbors.push_back(_v);
     }
+    //获取邻居总数
     int getNeighborCnt()
     {
         return neighbors.size();
+    }
+    void dump()
+    {
+        cout << v;
+        for (size_t i = 0; i < neighbors.size(); i++)
+        {
+            cout << " " << neighbors[i];
+        }
+        cout << endl;
     }
     //顶点
     int v;
