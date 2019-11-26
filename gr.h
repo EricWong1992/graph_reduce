@@ -62,7 +62,7 @@ public:
     //判断_v是否在v的闭邻居集合
     bool is_in_set(int _v)
     {
-        for (int i = 0; i < neighbor_cnt; ++i) {
+        for (int i = 0; i < getNeighborCnt(); ++i) {
             if (neighbors[i] == _v)
                 return true;
         }
@@ -137,7 +137,7 @@ void subset_reduce();
 void lock_vertex(int c, int locked_add);
 //输出信息
 void print_reduce_graph();
-void print_density();
+void print_density(int i);
 void print_degree();
 //释放内存
 void free_all(){
@@ -245,4 +245,16 @@ int build_instance_massive(char *file_name)
     uncover_num = vertex_num;
 
     return 1;
+}
+
+bool is_all_dominated()
+{
+    for (size_t i = 0; i < vertex_num; i++)
+    {
+        if (cs[i].num_in_c == 0)
+        {
+            return false;
+        }
+    }
+    return true;
 }
