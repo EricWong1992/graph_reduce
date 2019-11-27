@@ -135,7 +135,7 @@ void init_reduce()
         }
     }
     uncover_num = remain_num;
-    print_reduce_graph();
+    print_reduce_graph_info();
     superset_reduce();
 }
 
@@ -395,15 +395,15 @@ void superset_reduce()
             delete max_set;
         }
     }
-    // print_reduce_graph();
-     print_density(1);
+    print_reduce_graph_info();
+    generate_reduce_graph(1);
+    //  print_density(1);
     // print_degree();
     // times(&finish);
     // double tt = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
     // tt= round(tt * 100)/100.0;
     // cout << "Time: " << tt << "s" <<endl;
     subset_reduce();
-//    check();
 }
 
 void subset_reduce()
@@ -419,7 +419,7 @@ void subset_reduce()
             {
                 int v_n = vertex[i][j];
                 // && cs[v_n].is_exclude != 1
-                if (cs[v_n].num_in_c == 0 )
+                if (cs[v_n].score > 0 )
                 {
                     cnt++;
                 }
@@ -432,9 +432,10 @@ void subset_reduce()
             for (size_t j = 0; j < vertex_neightbourNum[i] && cnt1 < cnt; j++)
             {
                 int v_n = vertex[i][j];
-                if (cs[v_n].num_in_c == 0 )
+                if (cs[v_n].score > 0)
                 {
-                    sets[0]->addNeighbor(v_n);
+                    if (cs[v_n].num_in_c == 0)
+                        sets[0]->addNeighbor(v_n);
                     cnt1++;
                     sets[cnt1] = new NeighborSet(v_n);
                     int cnt2 = 0;
@@ -462,28 +463,25 @@ void subset_reduce()
                     auto set_a = sets[j];
                     auto set_b = sets[k];
                     //外层节点已经被删除，打断内部for循环
-                    if (reduce[set_a->v] == 1 || cs[set_a->v].is_exclude == 1)
+                    if (cs[set_a->v].is_exclude == 1)
                     {
                         break;
                     }
                     //内部节点已经被删除，跳过本次内部循环
-                    if (reduce[set_b->v] == 1 || cs[set_b->v].is_exclude == 1)
+                    if (cs[set_b->v].is_exclude == 1)
                     {
                         continue;
                     }
                     //如果set_b元素数量比set_a多，交换指针，set_b始终是待判断子集的指针
+                    /*
+                        如果两个顶点的有效邻居元素数量相等，则判断是否为互为子集
+                        如果互为子集，则选择一个排除
+                    */
                     if (set_a->getValidNeighborCnt() < set_b->getValidNeighborCnt())
                     {
                         auto temp = set_b;
                         set_b = set_a;
                         set_a = temp;
-                    }
-                    else if (set_a->getValidNeighborCnt == set_b->getValidNeighborCnt())
-                    {
-                        /*
-                        两个顶点的有效邻居元素数量相等，判断是否为互为子集
-                        如果互为子集，则选择一个排除
-                        */
                     }
                     //判断set_b是不是set_a的子集
                     bool is_subset = true;
@@ -500,13 +498,58 @@ void subset_reduce()
                     {
                         //set_b是set_a的子集，把set_b的头元素即v排除在候选解之外
                         cs[set_b->v].is_exclude = 1;
-//                        cout << "set_a:" << endl;
-//                        set_a->dump();
-//                        cout << "set_b:" << endl;
-//                        set_b->dump();
+                        // cout << "set_a:" << endl;
+                        // set_a->dump();
+                        // cout << "set_b:" << endl;
+                        // set_b->dump();
                     }
                 }
             }
+            //如果i未排除且i已经被支配，检查i的邻居里面未支配的顶点是不是其他顶点的闭邻居集合的子集
+            // if (cs[i].is_exclude != 1 && cs[i].num_in_c != 0)
+            // {
+            //     vector<int> v_a;
+            //     for (size_t j = 0; j < sets[0]->getNeighborCnt(); j++)
+            //     {
+            //         if (cs[sets[0]->neighbors[j]].num_in_c == 0)
+            //         {
+            //             v_a.push_back(sets[0]->neighbors[j]);
+            //         }
+            //     }
+            //     int cnt = 0;
+            //     bool is_exclude = false;
+            //     for (size_t j = 0; j < vertex_neightbourNum[i] && cnt < cs[i].score; j++)
+            //     {
+            //         int n_v = vertex[i][j];
+            //         if (cs[n_v].num_in_c == 0 && cs[n_v].is_exclude != 1)
+            //         {
+            //             for (size_t jj = 0; jj < vertex_neightbourNum[n_v]; jj++)
+            //             {
+            //                 int n_v_v = vertex[n_v][jj];
+            //                 if (reduce[n_v_v] != 1 && cs[n_v_v].locked != 1 && cs[n_v_v].is_exclude != 1)
+            //                 {
+            //                     //判断n_v_v的闭邻居集合是不是i的所有未支配邻居的超集
+            //                     vector<int> v_b;
+            //                     for (size_t jjj = 0; jjj < vertex_neightbourNum[n_v_v]; jjj++)
+            //                     {
+            //                         int n_v_v_v = vertex[n_v_v][jjj];
+            //                         if (cs[n_v_v_v].num_in_c == 0)
+            //                         {
+            //                             v_b.push_back(n_v_v_v);
+            //                         }
+            //                     }
+            //                     if (is_subset(v_a, v_b))
+            //                     {
+            //                         cs[i].is_exclude = 1;
+            //                         is_exclude = true;
+            //                         break;
+            //                     }
+            //                 }
+            //             }
+            //         }
+            //         if (is_exclude) break;
+            //     }
+            // }
             //free memory
             for (auto & set : sets)
             {
@@ -514,17 +557,49 @@ void subset_reduce()
             }
         }
     }
-    print_reduce_graph();
-    print_density(2);
-    // print_degree();
-    times(&finish);
-    double tt = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
-    tt= round(tt * 100)/100.0;
-    cout << "Time: " << tt << "s" <<endl;
+    
+    // times(&finish);
+    // double tt = double(finish.tms_utime - start.tms_utime + finish.tms_stime - start.tms_stime)/sysconf(_SC_CLK_TCK);
+    // tt= round(tt * 100)/100.0;
+    // cout << "Time: " << tt << "s" <<endl;
+    generate_reduce_graph(2);
+    print_reduce_graph_info();
+    reduce3();
+}
+
+void reduce3()
+{
+    cout << "forth step--->:reduce3" << endl;
+    int edge_cnt = 0;
+    for (size_t i = 0; i < vertex_num; i++)
+    {
+        if (cs[i].locked == 1 || reduce[i] == 1 || cs[i].is_exclude == 1)
+            continue;
+        bool is_output_v = false;
+        vector<int> neighbors;
+        bool is_all_forbid_in = true;
+        for (int j = 0; j < vertex_neightbourNum[i]; ++j) {
+            int v_n = vertex[i][j];
+            // || cs[v_n].num_in_c != 0
+            if (cs[v_n].locked == 1 || reduce[v_n] == 1 )
+                continue;
+            neighbors.push_back(v_n);
+            if (cs[v_n].is_exclude != 1)
+            {
+                is_all_forbid_in = false;
+            }
+        }
+        if (neighbors.size() == 0 || (cs[i].num_in_c != 0 &&is_all_forbid_in))
+        {
+            cs[i].is_exclude = 1;
+        }
+    }
+    generate_reduce_graph(3);
+    print_reduce_graph_info();
     check();
 }
 
-void print_reduce_graph()
+void print_reduce_graph_info()
 {
     int locked_num = 0;         //确定在最优解的顶点数量
     int uncover_num = 0;        //经过两次reduce后未支配顶点数量
@@ -575,27 +650,41 @@ void print_density(int idx)
         if (cs[i].locked == 1 || reduce[i] == 1 || cs[i].is_exclude == 1)
             continue;
         bool is_output_v = false;
+        vector<int> neighbors;
+        bool is_all_forbid_in = true;
         for (int j = 0; j < vertex_neightbourNum[i]; ++j) {
             int v_n = vertex[i][j];
-            if (cs[v_n].locked == 1 || reduce[v_n] == 1 || cs[v_n].num_in_c != 0)
+            // || cs[v_n].num_in_c != 0
+            if (cs[v_n].locked == 1 || reduce[v_n] == 1 )
                 continue;
-            if (!is_output_v)
+            neighbors.push_back(v_n);
+            if (cs[v_n].is_exclude != 1)
             {
-                cnt++;
-                if (cs[i].num_in_c == 0)
-                {
-                    openfile << i + 1 << " " << i+1;
-                } else
-                {
-                    openfile << i+1 ;
-                }
-                is_output_v = true;
+                is_all_forbid_in = false;
             }
             edge_cnt++;
-            openfile << " " <<  v_n + 1;
         }
-        if (is_output_v)
-            openfile << endl;
+        
+        if (neighbors.size() == 0 || (cs[i].num_in_c != 0 &&is_all_forbid_in))
+        {
+            continue;
+        }
+        cnt++;
+        if (idx == 2)
+            candidate.push_back(i);
+        if (cs[i].num_in_c == 0)
+        {
+            openfile << i + 1 << " " << i + 1;
+        }
+        else
+        {
+            openfile << i + 1;
+        }
+        for (size_t j = 0; j < neighbors.size(); j++)
+        {
+            openfile << " " << neighbors[j] + 1;
+        }
+        openfile << endl;
     }
     openfile.close();
     cout << "candidate: " << cnt << endl;
@@ -610,6 +699,55 @@ void print_density(int idx)
 //    {
 //        cout << "Density2: 0" << endl;
 //    }
+}
+
+void generate_reduce_graph(int step)
+{
+    string new_file_name = filename + "_r" + to_string(step);
+    std::ofstream openfile(new_file_name, std::ios::out);
+    int cnt = 0;
+    for (size_t i = 0; i < vertex_num; i++)
+    {
+        if (cs[i].locked == 1 || reduce[i] == 1 || cs[i].is_exclude == 1)
+            continue;
+        bool is_output_v = false;
+        vector<int> neighbors;
+        bool is_all_forbid_in = true;
+        for (int j = 0; j < vertex_neightbourNum[i]; ++j) {
+            int v_n = vertex[i][j];
+            // || cs[v_n].num_in_c != 0
+            if (cs[v_n].locked == 1 || reduce[v_n] == 1 )
+                continue;
+            neighbors.push_back(v_n);
+            if (cs[v_n].is_exclude != 1)
+            {
+                is_all_forbid_in = false;
+            }
+        }
+        
+        if (neighbors.size() == 0 || (cs[i].num_in_c != 0 &&is_all_forbid_in))
+        {
+            continue;
+        }
+        cnt++;
+        if (step == 3)
+            candidate.push_back(i);
+        if (cs[i].num_in_c == 0)
+        {
+            openfile << i + 1 << " " << i + 1;
+        }
+        else
+        {
+            openfile << i + 1;
+        }
+        for (size_t j = 0; j < neighbors.size(); j++)
+        {
+            openfile << " " << neighbors[j] + 1;
+        }
+        openfile << endl;
+    }
+    openfile.close();
+    cout << "candidate: " << cnt << endl;
 }
 
 void print_degree()
@@ -647,64 +785,41 @@ void print_degree()
 
 int check(){ // check if the solution is a correct cover
     cout << "checking.." << endl;
+    int valid_size = candidate.size();
     int cnt = 0;
-    vector<int> candidate;
-    for (size_t i = 0; i < vertex_num; i++)
+    while(!is_all_dominated() && valid_size != -1)
     {
-        if (cs[i].locked == 1 || reduce[i] == 1 || cs[i].is_exclude == 1)
-        {
-            continue;
-        }
-        cnt++;
-        candidate.push_back(i);
-    }
-    
-    cout << "candidate: " << cnt <<endl;
-    int candidate_size = candidate.size();
-    while(!is_all_dominated())
-    {
-        int max_v = 0;
         int max_score = 0;
-        int index = 0;
-        for (size_t i = 0; i < candidate_size; i++)
+        int max_index = 0;
+        for (size_t i = 0; i < valid_size; i++)
         {
             if (cs[candidate[i]].score > max_score)
             {
+                max_index = i;
                 max_score = cs[candidate[i]].score;
-                max_v = candidate[i];
-                index = i;
             }
         }
-        if (max_score > 0)
-        {
-            lock_vertex(max_v, 1);
-            //lock过的顶点从candidate中删除
-            candidate[index] = candidate[candidate_size - 1];
-            candidate_size--;
-        } else
-        {
-            break;
-        }
+        lock_vertex(candidate[max_index], 1);
+        cnt++;
+        candidate[max_index] = candidate[valid_size-- - 1];
+    }
+    if (is_all_dominated())
+    {
+        cout << "check lock num: " << cnt << endl;
+        cout << "All coverd!" << endl;
+    }
+    else{
+        cout << "Error: Candidate can't cover all vertex." << endl;
     }
     cnt = 0;
-    int cnt1 = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
         if (cs[i].locked == 1)
         {
             cnt++;
         }
-        if (cs[i].num_in_c == 0)
-        {
-            cout << i + 1 << endl;
-            cnt1++;
-        }
     }
-    if (cnt1 == 0)
-        cout << "All dominated!" << endl;
-    else
-        cout << "Undominated: " << cnt1 << endl;
-    cout << "lock: " << cnt << endl;
+    cout << "Lock num: " << cnt << endl;
     return 1;
 }
 

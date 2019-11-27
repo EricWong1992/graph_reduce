@@ -143,6 +143,7 @@ int *vertex_neightbourNum_bak;			//original neighbornum backup
 int *best_sol;					//最优解，未使用
 int *vertex_weight;		//顶点权值
 string filename;        //实例文件名
+vector<int> candidate;
 
 void init();
 void uncov_r_weight_inc();
@@ -154,12 +155,15 @@ void init_reduce();
 void superset_reduce();
 //子集缩减
 void subset_reduce();
+//reduce3
+void reduce3();
 //固定顶点
 void lock_vertex(int c, int locked_add);
 //输出信息
-void print_reduce_graph();
+void print_reduce_graph_info();
 void print_density(int i);
 void print_degree();
+void generate_reduce_graph(int step);
 //释放内存
 void free_all(){
     free(vertex_neightbourNum_bak);
@@ -268,6 +272,7 @@ int build_instance_massive(char *file_name)
     return 1;
 }
 
+//是否全部支配
 bool is_all_dominated()
 {
     for (size_t i = 0; i < vertex_num; i++)
@@ -276,6 +281,26 @@ bool is_all_dominated()
         {
             return false;
         }
+    }
+    return true;
+}
+
+//集合b是不是集合a的子集
+bool is_subset(vector<int> a, vector<int> b)
+{
+    for (size_t i = 0; i < b.size(); i++)
+    {
+        bool is_inside_a = false;
+        for (size_t j = 0; j < a.size(); j++)
+        {
+            if (b[i] == a[j])
+            {
+                is_inside_a = true;
+                break;
+            }
+        }
+        if (!is_inside_a)
+            return false;
     }
     return true;
 }
