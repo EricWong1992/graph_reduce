@@ -411,14 +411,15 @@ void subset_reduce()
     cout << "third step--->:subset reduce" <<endl;
     for (size_t i = 0; i < vertex_num; i++)
     {
-        if (cs[i].num_in_c == 0 && cs[i].is_exclude != 1)
+        if (cs[i].locked != 1 && reduce[i] != 1 && cs[i].is_exclude != 1)
+//        if (cs[i].num_in_c == 0 && cs[i].is_exclude != 1)
         {
             int cnt = 1;    //i本身也要存在集合里面, 记录i的闭邻居集合有多少元素
             for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
             {
                 int v_n = vertex[i][j];
                 // && cs[v_n].is_exclude != 1
-                if (cs[v_n].score > 0 )
+                if (cs[v_n].num_in_c == 0 )
                 {
                     cnt++;
                 }
@@ -431,8 +432,7 @@ void subset_reduce()
             for (size_t j = 0; j < vertex_neightbourNum[i] && cnt1 < cnt; j++)
             {
                 int v_n = vertex[i][j];
-                // && cs[v_n].is_exclude != 1
-                if (cs[v_n].score > 0 )
+                if (cs[v_n].num_in_c == 0 )
                 {
                     sets[0]->addNeighbor(v_n);
                     cnt1++;
@@ -446,7 +446,6 @@ void subset_reduce()
                     for (size_t k = 0; k < vertex_neightbourNum[v_n] && cnt2 < cs[v_n].score; k++)
                     {
                         int v_n_n = vertex[v_n][k];
-                        // && cs[v_n_n].is_exclude != 1
                         if (cs[v_n_n].num_in_c == 0)
                         {
                             sets[cnt1]->addNeighbor(v_n_n);
@@ -473,17 +472,25 @@ void subset_reduce()
                         continue;
                     }
                     //如果set_b元素数量比set_a多，交换指针，set_b始终是待判断子集的指针
-                    if (set_a->getNeighborCnt() < set_b->getNeighborCnt())
+                    if (set_a->getValidNeighborCnt() < set_b->getValidNeighborCnt())
                     {
                         auto temp = set_b;
                         set_b = set_a;
                         set_a = temp;
                     }
+                    else if (set_a->getValidNeighborCnt == set_b->getValidNeighborCnt())
+                    {
+                        /*
+                        两个顶点的有效邻居元素数量相等，判断是否为互为子集
+                        如果互为子集，则选择一个排除
+                        */
+                    }
                     //判断set_b是不是set_a的子集
                     bool is_subset = true;
                     for (size_t s = 0; s < set_b->getNeighborCnt(); s++)
                     {
-                        if (!set_a->is_in_set(set_b->neighbors[s]))
+                        //已支配顶点可以不用子集判断
+                        if (cs[set_b->neighbors[s]].num_in_c == 0 &&  !set_a->is_in_set(set_b->neighbors[s]))
                         {
                             is_subset = false;
                             break;
@@ -491,13 +498,12 @@ void subset_reduce()
                     }
                     if (is_subset)
                     {
-                        //set_b是set_a的子集，把set_b的头元素即v删除
-                        // reduce[set_b->v] = 1;
+                        //set_b是set_a的子集，把set_b的头元素即v排除在候选解之外
                         cs[set_b->v].is_exclude = 1;
-                        // cout << "set_a:" << endl;
-                        // set_a->dump();
-                        // cout << "set_b:" << endl;
-                        // set_b->dump();
+//                        cout << "set_a:" << endl;
+//                        set_a->dump();
+//                        cout << "set_b:" << endl;
+//                        set_b->dump();
                     }
                 }
             }
@@ -571,25 +577,22 @@ void print_density(int idx)
         bool is_output_v = false;
         for (int j = 0; j < vertex_neightbourNum[i]; ++j) {
             int v_n = vertex[i][j];
-            if (cs[v_n].locked == 1 || reduce[v_n] == 1 || cs[v_n].is_exclude == 1)
+            if (cs[v_n].locked == 1 || reduce[v_n] == 1 || cs[v_n].num_in_c != 0)
                 continue;
-            // if (cs[v_n].num_in_c == 0)
-            // {
-                if (!is_output_v)
+            if (!is_output_v)
+            {
+                cnt++;
+                if (cs[i].num_in_c == 0)
                 {
-                    cnt++;
-                    if (cs[i].num_in_c == 0)
-                    {
-                        openfile << i + 1 << " " << i+1;
-                    } else
-                    {
-                        openfile << i+1 ;
-                    }
-                    is_output_v = true;
+                    openfile << i + 1 << " " << i+1;
+                } else
+                {
+                    openfile << i+1 ;
                 }
-                edge_cnt++;
-                openfile << " " <<  v_n + 1;
-            // }
+                is_output_v = true;
+            }
+            edge_cnt++;
+            openfile << " " <<  v_n + 1;
         }
         if (is_output_v)
             openfile << endl;

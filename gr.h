@@ -72,12 +72,22 @@ public:
     void addNeighbor(int _v)
     {
         neighbors.push_back(_v);
+        if (cs[_v].num_in_c == 0)
+        {
+            m_iValidNeighborNum++;
+        }
     }
-    //获取邻居总数
+    //获取有效邻居(未支配)总数
+    int getValidNeighborCnt()
+    {
+        return m_iValidNeighborNum;
+    }
+    //输出邻居总数
     int getNeighborCnt()
     {
         return neighbors.size();
     }
+    //输出v及v的闭邻居集合
     void dump()
     {
         cout << v;
@@ -91,7 +101,8 @@ public:
     int v;
     //v的邻居集合
     vector<int> neighbors;
-    //v的邻居数量
+    //有效邻居总数
+    int m_iValidNeighborNum = 0;
 };
 
 tms start, finish;
