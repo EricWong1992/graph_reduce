@@ -155,8 +155,6 @@ void init_reduce();
 void superset_reduce();
 //子集缩减
 void subset_reduce();
-//reduce3
-void reduce3();
 //固定顶点
 void lock_vertex(int c, int locked_add);
 //输出信息

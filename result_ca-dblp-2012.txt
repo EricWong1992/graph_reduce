@@ -17,26 +17,11 @@ Uncover Vertex: 226
 Remain Vertex:364
 Forbid Add: 0
 Percent: 0.11%
-candidate: 364
 third step--->:subset reduce
-candidate: 94
 Total Vertex: 317080
 Delete Vertex: 270632
 Fixed Vertex: 46084
-Uncover Vertex: 33
+Uncover Vertex: 226
 Remain Vertex:97
 Forbid Add: 267
 Percent: 0.03%
-forth step--->:reduce3
-candidate: 94
-Total Vertex: 317080
-Delete Vertex: 270632
-Fixed Vertex: 46084
-Uncover Vertex: 33
-Remain Vertex:94
-Forbid Add: 270
-Percent: 0.03%
-checking..
-check lock num: 54
-All coverd!
-Lock num: 46138

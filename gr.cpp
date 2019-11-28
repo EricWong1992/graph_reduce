@@ -505,51 +505,6 @@ void subset_reduce()
                     }
                 }
             }
-            //如果i未排除且i已经被支配，检查i的邻居里面未支配的顶点是不是其他顶点的闭邻居集合的子集
-            // if (cs[i].is_exclude != 1 && cs[i].num_in_c != 0)
-            // {
-            //     vector<int> v_a;
-            //     for (size_t j = 0; j < sets[0]->getNeighborCnt(); j++)
-            //     {
-            //         if (cs[sets[0]->neighbors[j]].num_in_c == 0)
-            //         {
-            //             v_a.push_back(sets[0]->neighbors[j]);
-            //         }
-            //     }
-            //     int cnt = 0;
-            //     bool is_exclude = false;
-            //     for (size_t j = 0; j < vertex_neightbourNum[i] && cnt < cs[i].score; j++)
-            //     {
-            //         int n_v = vertex[i][j];
-            //         if (cs[n_v].num_in_c == 0 && cs[n_v].is_exclude != 1)
-            //         {
-            //             for (size_t jj = 0; jj < vertex_neightbourNum[n_v]; jj++)
-            //             {
-            //                 int n_v_v = vertex[n_v][jj];
-            //                 if (reduce[n_v_v] != 1 && cs[n_v_v].locked != 1 && cs[n_v_v].is_exclude != 1)
-            //                 {
-            //                     //判断n_v_v的闭邻居集合是不是i的所有未支配邻居的超集
-            //                     vector<int> v_b;
-            //                     for (size_t jjj = 0; jjj < vertex_neightbourNum[n_v_v]; jjj++)
-            //                     {
-            //                         int n_v_v_v = vertex[n_v_v][jjj];
-            //                         if (cs[n_v_v_v].num_in_c == 0)
-            //                         {
-            //                             v_b.push_back(n_v_v_v);
-            //                         }
-            //                     }
-            //                     if (is_subset(v_a, v_b))
-            //                     {
-            //                         cs[i].is_exclude = 1;
-            //                         is_exclude = true;
-            //                         break;
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //         if (is_exclude) break;
-            //     }
-            // }
             //free memory
             for (auto & set : sets)
             {
@@ -564,39 +519,7 @@ void subset_reduce()
     // cout << "Time: " << tt << "s" <<endl;
     generate_reduce_graph(2);
     print_reduce_graph_info();
-    reduce3();
-}
-
-void reduce3()
-{
-    cout << "forth step--->:reduce3" << endl;
-    int edge_cnt = 0;
-    for (size_t i = 0; i < vertex_num; i++)
-    {
-        if (cs[i].locked == 1 || reduce[i] == 1 || cs[i].is_exclude == 1)
-            continue;
-        bool is_output_v = false;
-        vector<int> neighbors;
-        bool is_all_forbid_in = true;
-        for (int j = 0; j < vertex_neightbourNum[i]; ++j) {
-            int v_n = vertex[i][j];
-            // || cs[v_n].num_in_c != 0
-            if (cs[v_n].locked == 1 || reduce[v_n] == 1 )
-                continue;
-            neighbors.push_back(v_n);
-            if (cs[v_n].is_exclude != 1)
-            {
-                is_all_forbid_in = false;
-            }
-        }
-        if (neighbors.size() == 0 || (cs[i].num_in_c != 0 &&is_all_forbid_in))
-        {
-            cs[i].is_exclude = 1;
-        }
-    }
-    generate_reduce_graph(3);
-    print_reduce_graph_info();
-    check();
+    // check();
 }
 
 void print_reduce_graph_info()
@@ -606,7 +529,7 @@ void print_reduce_graph_info()
     int remove_num = 0;         //确定删除的顶点数量
     remain_num = 0;                 //经过两次reduce后剩余顶点数量
     int forbid_add_num = 0;     //subset_reduce确定一定不再最优解的顶点数量
-    int candidate_num = 0;      //两次reduce后筛选的可能在候选解的数量(需要bb处理的数量)
+    int candidate_num = 0;      //reduce后筛选的可能在候选解的数量
     for (size_t i = 0; i < vertex_num; i++)
     {
         if  (cs[i].locked == 1)
@@ -619,16 +542,16 @@ void print_reduce_graph_info()
             remove_num++;
             continue;
         }
+        if (cs[i].num_in_c == 0)
+        {
+            uncover_num++;
+        }
         if (cs[i].is_exclude == 1)
         {
             forbid_add_num++;
             continue;
         }
         remain_num++;
-        if (cs[i].num_in_c == 0)
-        {
-            uncover_num++;
-        }
     }
     std::cout << "Total Vertex: " << vertex_num << endl;
     std::cout << "Delete Vertex: " << remove_num << endl;
@@ -642,96 +565,50 @@ void print_reduce_graph_info()
 void print_density(int idx)
 {
     int edge_cnt = 0;
-    string new_file_name = filename + "_r" + to_string(idx);
-    std::ofstream openfile(new_file_name, std::ios::out);
-    int cnt = 0;
+    int vertex_cnt = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
         if (cs[i].locked == 1 || reduce[i] == 1 || cs[i].is_exclude == 1)
             continue;
-        bool is_output_v = false;
         vector<int> neighbors;
-        bool is_all_forbid_in = true;
         for (int j = 0; j < vertex_neightbourNum[i]; ++j) {
             int v_n = vertex[i][j];
-            // || cs[v_n].num_in_c != 0
             if (cs[v_n].locked == 1 || reduce[v_n] == 1 )
                 continue;
             neighbors.push_back(v_n);
-            if (cs[v_n].is_exclude != 1)
-            {
-                is_all_forbid_in = false;
-            }
             edge_cnt++;
         }
-        
-        if (neighbors.size() == 0 || (cs[i].num_in_c != 0 &&is_all_forbid_in))
-        {
-            continue;
-        }
-        cnt++;
-        if (idx == 2)
-            candidate.push_back(i);
-        if (cs[i].num_in_c == 0)
-        {
-            openfile << i + 1 << " " << i + 1;
-        }
-        else
-        {
-            openfile << i + 1;
-        }
-        for (size_t j = 0; j < neighbors.size(); j++)
-        {
-            openfile << " " << neighbors[j] + 1;
-        }
-        openfile << endl;
+        vertex_cnt++;
     }
-    openfile.close();
-    cout << "candidate: " << cnt << endl;
-//    cout << "Remain vertex: " << remain_num << endl;
-//    cout << "Remain edges: " << edge_cnt << endl;
-//    cout << "Density1: " << fixed << setprecision(3) << edge_num *1.0 / vertex_num / (vertex_num - 1) * 100 << "%" << endl;
-//    if (remain_num != 0)
-//    {
-//        cout << "Density2: " << fixed << setprecision(3) << edge_cnt * 1.0 / remain_num / (remain_num - 1) * 100 << "%" << endl;
-//    }
-//    else
-//    {
-//        cout << "Density2: 0" << endl;
-//    }
+   cout << "Density1: " << fixed << setprecision(3) << edge_num *1.0 / vertex_num / (vertex_num - 1) * 100 << "%" << endl;
+   if (vertex_cnt != 0)
+   {
+       cout << "Density2: " << fixed << setprecision(3) << edge_cnt * 1.0 / vertex_cnt / (vertex_cnt - 1) * 100 << "%" << endl;
+   }
+   else
+   {
+       cout << "Density2: 0" << endl;
+   }
 }
 
 void generate_reduce_graph(int step)
 {
     string new_file_name = filename + "_r" + to_string(step);
     std::ofstream openfile(new_file_name, std::ios::out);
-    int cnt = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
         if (cs[i].locked == 1 || reduce[i] == 1 || cs[i].is_exclude == 1)
             continue;
-        bool is_output_v = false;
         vector<int> neighbors;
-        bool is_all_forbid_in = true;
         for (int j = 0; j < vertex_neightbourNum[i]; ++j) {
             int v_n = vertex[i][j];
-            // || cs[v_n].num_in_c != 0
-            if (cs[v_n].locked == 1 || reduce[v_n] == 1 )
+            if (cs[v_n].locked == 1 || reduce[v_n] == 1 || cs[v_n].num_in_c != 0)
                 continue;
             neighbors.push_back(v_n);
-            if (cs[v_n].is_exclude != 1)
-            {
-                is_all_forbid_in = false;
-            }
+            
         }
-        
-        if (neighbors.size() == 0 || (cs[i].num_in_c != 0 &&is_all_forbid_in))
-        {
+        if (neighbors.size() == 0)
             continue;
-        }
-        cnt++;
-        if (step == 3)
-            candidate.push_back(i);
         if (cs[i].num_in_c == 0)
         {
             openfile << i + 1 << " " << i + 1;
@@ -745,9 +622,10 @@ void generate_reduce_graph(int step)
             openfile << " " << neighbors[j] + 1;
         }
         openfile << endl;
+        if (step == 2)
+            candidate.push_back(i);
     }
     openfile.close();
-    cout << "candidate: " << cnt << endl;
 }
 
 void print_degree()
