@@ -4,3 +4,5 @@
 CMakeLists.txt
 cmake-build-debug/*
 .idea/*
+*.txt
+*.mtx_r*
