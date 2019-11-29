@@ -22,6 +22,15 @@ struct Edge{
     int v2;
 };
 
+//顶点状态
+enum State
+{
+    Candidate = 0,          //剩余顶点
+    Fixed,                            //固定，在最优解中
+    Delete,                         //可删除节点
+    Forbid,                         //禁止加入最优解，但又不可删除
+};
+
 Edge *edge;////////////////////////////////////////
 
 int edge_num;
@@ -33,13 +42,11 @@ int *t_index;/////////////////////////////////////////
 
 //顶点信息
 typedef struct Vertex_information{
+    State state;                //顶点状态
     int num_in_c;           //被支配的次数
-    char is_in_c;               //是否已添加到候选解
     int cost;                       //顶点花费
     int score;						//加入该顶点后，自己及邻居从未支配到支配的顶点数量
-    int locked;                     //是否被fix
     int is_in_search;       //是否在搜索集
-    int is_exclude;         //是否排除出最优解。子集缩减排除
 }Vertex_information;
 
 //所有顶点信息
@@ -117,9 +124,6 @@ long best_value;
 
 int vertex_num;//顶点个数
 
-//未使用，顶点是否被删除
-int *reduce;
-
 //未支配顶点信息
 int uncover_num;
 int  *uncover_vertex;
@@ -146,8 +150,7 @@ string filename;        //实例文件名
 vector<int> candidate;
 
 void init();
-void uncov_r_weight_inc();
-void update_best_sol();
+//检查解是否完全支配图
 int check();
 //初始缩减，处理图边缘顶点
 void init_reduce();
@@ -156,7 +159,7 @@ void superset_reduce();
 //子集缩减
 void subset_reduce();
 //固定顶点
-void lock_vertex(int c, int locked_add);
+void lock_vertex(int c);
 //输出信息
 void print_reduce_graph_info();
 void print_density(int i);
@@ -172,7 +175,6 @@ void free_all(){
     free(t_index);
     free(cs);
     free(best_array);
-    free(reduce);
     free(uncover_vertex);
     free(uncover_vertex_index);
     free(remain_vertex);
@@ -211,12 +213,10 @@ int build_instance_massive(char *file_name)
     vertex_weight=(int *)malloc(vertex_num*sizeof(int));//动态权重
 
     for(size_t i=0;i<vertex_num;i++){
+        cs[i].state = State::Candidate;
         cs[i].cost=1;
-        cs[i].is_in_c=0;
         cs[i].num_in_c=0;
-        cs[i].locked = 0;
         cs[i].is_in_search = 0;
-        cs[i].is_exclude = 0;
         vertex_neightbourNum[i]=0;
         best_sol[i]=0;
         t[i] = 0;
@@ -250,7 +250,6 @@ int build_instance_massive(char *file_name)
     free(edge);
 
     t_index = (int *)malloc(vertex_num*sizeof(int));
-    reduce = (int *)malloc(vertex_num*sizeof(int));
     uncover_vertex =  (int *)malloc(vertex_num*sizeof(int));
     uncover_vertex_index=(int *)malloc(vertex_num*sizeof(int));
     remain_vertex = (int *)malloc(vertex_num*sizeof(int));
@@ -279,26 +278,6 @@ bool is_all_dominated()
         {
             return false;
         }
-    }
-    return true;
-}
-
-//集合b是不是集合a的子集
-bool is_subset(vector<int> a, vector<int> b)
-{
-    for (size_t i = 0; i < b.size(); i++)
-    {
-        bool is_inside_a = false;
-        for (size_t j = 0; j < a.size(); j++)
-        {
-            if (b[i] == a[j])
-            {
-                is_inside_a = true;
-                break;
-            }
-        }
-        if (!is_inside_a)
-            return false;
     }
     return true;
 }
