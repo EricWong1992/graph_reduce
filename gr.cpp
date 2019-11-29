@@ -126,17 +126,16 @@ void init_reduce()
             remain_vertex[remain_num++] = i;
         }
     }
-    uncover_num = remain_num;
 }
 
 //顶点从未支配中移除
 void remove_from_uncover(int v)
 {
     uncover_num--;
-    int uk = uncover_vertex_index[v];
-    int ck = uncover_vertex[uncover_num];
-    uncover_vertex[uk] = ck;
-    uncover_vertex_index[ck] = uk;
+    // int uk = uncover_vertex_index[v];
+    // int ck = uncover_vertex[uncover_num];
+    // uncover_vertex[uk] = ck;
+    // uncover_vertex_index[ck] = uk;
 }
 
 //顶点score值改变，判断加入t还是移出t
@@ -144,20 +143,20 @@ void modify_t(int v)
 {
     if (cs[v].score == 0)
         reduce(v);
-    if (cs[v].score == 0 && t_index[v] == -1 && cs[v].state != State::Fixed)
-    {
-        t[t_length] = v;
-        t_index[v] = t_length++;
-    }
-    else if (t_index[v] != -1 && cs[v].score != 0)
-    {
-        t_length--;
-        int uk = t_index[v];
-        int ck = t[t_length];
-        t[uk] = ck;
-        t_index[ck] = uk;
-        t_index[v] = -1;
-    }
+    // if (cs[v].score == 0 && t_index[v] == -1 && cs[v].state != State::Fixed)
+    // {
+    //     t[t_length] = v;
+    //     t_index[v] = t_length++;
+    // }
+    // else if (t_index[v] != -1 && cs[v].score != 0)
+    // {
+    //     t_length--;
+    //     int uk = t_index[v];
+    //     int ck = t[t_length];
+    //     t[uk] = ck;
+    //     t_index[ck] = uk;
+    //     t_index[v] = -1;
+    // }
 }
 
 //把顶点c固定
@@ -172,13 +171,13 @@ void lock_vertex(int c)
         t[t_length] = c;
         t_index[c] = t_length++;
     }
-    //if (cs[c].num_in_c == 0)
-    //	remove_from_uncover(c);
+    if (cs[c].num_in_c == 0)
+    	remove_from_uncover(c);
     for (size_t h = 0; h < vertex_neightbourNum[c]; h++)
     {
         int v_n = vertex[c][h];
-        //if (cs[i].num_in_c == 0)
-        //	remove_from_uncover(i);
+        if (cs[v_n].num_in_c == 0)
+        	remove_from_uncover(v_n);
         cs[v_n].num_in_c++;
         if (cs[c].num_in_c == 0)
         {
@@ -367,6 +366,7 @@ void superset_reduce()
                             for (size_t k = 0; k < vertex_neightbourNum[v_n_n] && cnt2 < cs[v_n_n].score; k++)
                             {
                                 int v_n_n_n = vertex[v_n_n][k];
+                                //未支配且不在搜索集的三层邻居加入搜索集
                                 if (cs[v_n_n_n].num_in_c == 0 && cs[v_n_n_n].is_in_search == 0)
                                 {
                                     cs[v_n_n_n].is_in_search = 1;
@@ -474,10 +474,6 @@ void subset_reduce()
                     {
                         //set_b是set_a的子集，把set_b的头元素即v排除在候选解之外
                         cs[set_b->v].state = State::Forbid;
-                        // cout << "set_a:" << endl;
-                        // set_a->dump();
-                        // cout << "set_b:" << endl;
-                        // set_b->dump();
                     }
                 }
             }

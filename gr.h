@@ -272,12 +272,6 @@ int build_instance_massive(char *file_name)
 //是否全部支配
 bool is_all_dominated()
 {
-    for (size_t i = 0; i < vertex_num; i++)
-    {
-        if (cs[i].num_in_c == 0)
-        {
-            return false;
-        }
-    }
-    return true;
+    // cout << uncover_num << endl;
+    return uncover_num == 0;
 }
