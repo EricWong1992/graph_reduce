@@ -1,5 +1,6 @@
 #include <iomanip>
 #include "gr.h"
+#include "ilcplex/ilocplex.h"
 
 #define reduce(i) cs[i].state = State::Delete;
 
@@ -25,6 +26,123 @@ void init() {
         uncover_vertex[i] = i;
         uncover_num++;
     }
+}
+
+void test_cplex()
+{
+    IloEnv env;
+    try {
+        IloModel model(env);
+        IloNumVarArray vars(env);
+        for (size_t i = 0; i < 7; i++)
+        {
+            vars.add(IloNumVar(env, 0, 1, IloNumVar::Int));
+        }
+        IloExpr obj = vars[0];
+        for (size_t i = 1; i < 7; i++)
+        {
+            obj += vars[i];
+        }
+        model.add(IloMinimize(env, obj));
+        model.add(vars[0] + vars[1] >= 1);
+        model.add(vars[1] + vars[0] >= 1);
+        model.add(vars[2] + vars[3] >= 1);
+        model.add(vars[3] + vars[1] + vars[2] + vars[4] + vars[5] >= 1);
+        model.add(vars[4] + vars[3] >= 1);
+        model.add(vars[5] + vars[3] + vars[6] >= 1);
+        model.add(vars[6] + vars[5] >= 1);
+
+        IloCplex cplex(model);
+        if (!cplex.solve()) {
+            env.error() << "Failed to optimize LP." << endl;
+            throw(-1);
+        }
+
+        IloNumArray vals(env);
+        env.out() << "Solution status = " << cplex.getStatus() << endl;
+        env.out() << "Solution value = " << cplex.getObjValue() << endl;
+        cplex.getValues(vals, vars);
+        env.out() << "Values = " << vals << endl;
+        cplex.exportModel("lpex1.lp");
+    }
+    catch (IloException & e) {
+        cerr << "Concert exception caught: " << e << endl;
+    }
+    catch (...) {
+        cerr << "Unknown exception caught" << endl;
+    }
+
+    env.end();
+}
+
+void get_result_by_cplex()
+{
+    IloEnv env;
+    try {
+        IloModel model(env);
+        IloNumVarArray vars(env);
+        //记录vars存储的顶点
+        int* var_vertex = new int(vertex_num);
+        int* var_index = new int(vertex_num);
+        for (size_t i = 0; i < vertex_num; i++)
+        {
+            var_vertex[i] = -1;
+            var_index[i] = -1;
+        }
+        int var_count = 0;
+        for (size_t i = 0; i < vertex_num; i++)
+        {
+            if (cs[i].state == State::Candidate)
+            {
+                //添加变量，取值为{0,1}
+                vars.add(IloNumVar(env, 0, 1, IloNumVar::Int));
+                var_vertex[var_count] = i;
+                var_index[i] = var_count;
+                var_count++;
+            }
+        }
+        //构造目标函数
+        IloExpr obj = vars[0];
+        for (size_t i = 1; i < var_count; i++)
+        {
+            obj += vars[i];
+        }
+        model.add(IloMinimize(env, obj));
+        for (size_t i = 0; i < vertex_num; i++)
+        {
+            if (var_vertex[i] == -1)
+            {
+                break;
+            }
+            IloExpr constraint = vars[i];
+            for (size_t j = 0; j < vertex_neightbourNum[var_vertex[i]]; j++)
+            {
+                int v_n = vertex[i][j];
+                constraint += vars[var_index[v_n]];
+            }
+            model.add(constraint >= 1);
+        }
+        IloCplex cplex(model);
+        if (!cplex.solve())
+        {
+            env.error() << "Failed to optimize LP." << endl;
+            throw(-1);
+        }
+        else
+        {
+            cout << "Success!" << endl;
+        }
+        
+        delete[] var_index;
+        delete[] var_vertex;
+    }
+    catch (IloException & e) {
+        cerr << "Concert exception caught: " << e << endl;
+    }
+    catch (...) {
+        cerr << "Unknown exception caught" << endl;
+    }
+    env.end();
 }
 
 void init_reduce()
@@ -665,6 +783,9 @@ int check(){
 }
 
 int main(int argc, char *argv[]){
+
+    // test_cplex();
+
     if(argc<2){
         printf("input wrong\n");
         return 0;
@@ -674,6 +795,8 @@ int main(int argc, char *argv[]){
     time_limit=atof(argv[2]);
 
     init();
+    get_result_by_cplex();
+    return 0;
     //初始reduce
     init_reduce();
     print_reduce_graph_info();
