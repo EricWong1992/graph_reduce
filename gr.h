@@ -47,6 +47,10 @@ typedef struct Vertex_information{
     int cost;                       //顶点花费
     int score;						//加入该顶点后，自己及邻居从未支配到支配的顶点数量
     int is_in_search;       //是否在搜索集
+    void dump()
+    {
+        cout << "state:" << state << endl;
+    }
 }Vertex_information;
 
 //所有顶点信息

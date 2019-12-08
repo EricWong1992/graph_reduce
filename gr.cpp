@@ -82,8 +82,9 @@ void get_result_by_cplex()
         IloModel model(env);
         IloNumVarArray vars(env);
         //记录vars存储的顶点
-        int* var_vertex = new int(vertex_num);
-        int* var_index = new int(vertex_num);
+        int* var_vertex = new int[vertex_num];
+        int* var_index = new int[vertex_num];
+
         for (size_t i = 0; i < vertex_num; i++)
         {
             var_vertex[i] = -1;
@@ -100,7 +101,15 @@ void get_result_by_cplex()
                 var_index[i] = var_count;
                 var_count++;
             }
+            else if(cs[i].state == State::Forbid)
+            {
+                vars.add(IloNumVar(env, 0, 0, IloNumVar::Int));
+                var_vertex[var_count] = i;
+                var_index[i] = var_count;
+                var_count++;
+            }
         }
+        cout << "var_count:" << var_count << endl;
         //构造目标函数
         IloExpr obj = vars[0];
         for (size_t i = 1; i < var_count; i++)
@@ -108,20 +117,32 @@ void get_result_by_cplex()
             obj += vars[i];
         }
         model.add(IloMinimize(env, obj));
-        for (size_t i = 0; i < vertex_num; i++)
+        
+        int constraint_count = 0;
+        for (size_t i = 0; i < var_count; i++)
         {
             if (var_vertex[i] == -1)
             {
                 break;
             }
-            IloExpr constraint = vars[i];
-            for (size_t j = 0; j < vertex_neightbourNum[var_vertex[i]]; j++)
+            int v = var_vertex[i];
+            if (cs[v].state == State::Forbid)
             {
-                int v_n = vertex[i][j];
-                constraint += vars[var_index[v_n]];
+                continue;
+            }
+            constraint_count++;
+            IloExpr constraint = vars[i];
+            for (size_t j = 0; j < vertex_neightbourNum[v]; j++)
+            {
+                int v_n = vertex[v][j];
+                if (cs[v_n].state == State::Candidate || cs[v_n].state == State::Forbid)
+                {
+                    constraint += vars[var_index[v_n]];
+                }
             }
             model.add(constraint >= 1);
         }
+        cout << "constraint_cout:" << constraint_count << endl;
         IloCplex cplex(model);
         if (!cplex.solve())
         {
@@ -131,6 +152,18 @@ void get_result_by_cplex()
         else
         {
             cout << "Success!" << endl;
+            IloNumArray vals(env);
+            env.out() << "Solution status = " << cplex.getStatus() << endl;
+            cplex.getValues(vals, vars);
+            int lock_num = 0;
+            for (size_t i = 0; i < var_count; i++)
+            {
+                if (vals[i] == 1)
+                {
+                    lock_num++;
+                }
+            }
+            cout << "lock_num:" << lock_num << endl;
         }
         
         delete[] var_index;
@@ -796,7 +829,6 @@ int main(int argc, char *argv[]){
 
     init();
     get_result_by_cplex();
-    return 0;
     //初始reduce
     init_reduce();
     print_reduce_graph_info();
@@ -808,6 +840,7 @@ int main(int argc, char *argv[]){
     subset_reduce();
     print_reduce_graph_info();
     generate_reduce_graph(2);
+    get_result_by_cplex();
     //检查是否为正确解
     // check();
     //释放内存
