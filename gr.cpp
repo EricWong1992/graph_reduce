@@ -28,6 +28,7 @@ void init() {
     }
 }
 
+//cplex小例子
 void test_cplex()
 {
     IloEnv env;
@@ -63,6 +64,7 @@ void test_cplex()
         env.out() << "Solution value = " << cplex.getObjValue() << endl;
         cplex.getValues(vals, vars);
         env.out() << "Values = " << vals << endl;
+        //导出问题
         cplex.exportModel("lpex1.lp");
     }
     catch (IloException & e) {
@@ -75,74 +77,46 @@ void test_cplex()
     env.end();
 }
 
-void get_result_by_cplex()
+void cplex_result_origin_graph()
 {
     IloEnv env;
     try {
         IloModel model(env);
         IloNumVarArray vars(env);
-        //记录vars存储的顶点
-        int* var_vertex = new int[vertex_num];
-        int* var_index = new int[vertex_num];
-
-        for (size_t i = 0; i < vertex_num; i++)
-        {
-            var_vertex[i] = -1;
-            var_index[i] = -1;
-        }
-        int var_count = 0;
         for (size_t i = 0; i < vertex_num; i++)
         {
             if (cs[i].state == State::Candidate)
             {
                 //添加变量，取值为{0,1}
-                vars.add(IloNumVar(env, 0, 1, IloNumVar::Int));
-                var_vertex[var_count] = i;
-                var_index[i] = var_count;
-                var_count++;
+                vars.add(IloNumVar(env, 0, 1, IloNumVar::Int, ("x"+to_string(i)).c_str()));
             }
-            else if(cs[i].state == State::Forbid)
+            else if(cs[i].state == State::Forbid || cs[i].state == State::Delete)
             {
-                vars.add(IloNumVar(env, 0, 0, IloNumVar::Int));
-                var_vertex[var_count] = i;
-                var_index[i] = var_count;
-                var_count++;
+                vars.add(IloNumVar(env, 0, 0, IloNumVar::Int, ("x"+to_string(i)).c_str()));
+            }
+            else
+            {
+                vars.add(IloNumVar(env, 1, 1, IloNumVar::Int, ("x"+to_string(i)).c_str()));
             }
         }
-        cout << "var_count:" << var_count << endl;
         //构造目标函数
         IloExpr obj = vars[0];
-        for (size_t i = 1; i < var_count; i++)
+        for (size_t i = 1; i < vertex_num; i++)
         {
             obj += vars[i];
         }
         model.add(IloMinimize(env, obj));
         
-        int constraint_count = 0;
-        for (size_t i = 0; i < var_count; i++)
+        for (size_t i = 0; i < vertex_num; i++)
         {
-            if (var_vertex[i] == -1)
-            {
-                break;
-            }
-            int v = var_vertex[i];
-            if (cs[v].state == State::Forbid)
-            {
-                continue;
-            }
-            constraint_count++;
             IloExpr constraint = vars[i];
-            for (size_t j = 0; j < vertex_neightbourNum[v]; j++)
+            for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
             {
-                int v_n = vertex[v][j];
-                if (cs[v_n].state == State::Candidate || cs[v_n].state == State::Forbid)
-                {
-                    constraint += vars[var_index[v_n]];
-                }
+                int v_n = vertex[i][j];
+                constraint += vars[v_n];
             }
             model.add(constraint >= 1);
         }
-        cout << "constraint_cout:" << constraint_count << endl;
         IloCplex cplex(model);
         if (!cplex.solve())
         {
@@ -156,7 +130,7 @@ void get_result_by_cplex()
             env.out() << "Solution status = " << cplex.getStatus() << endl;
             cplex.getValues(vals, vars);
             int lock_num = 0;
-            for (size_t i = 0; i < var_count; i++)
+            for (size_t i = 0; i < vertex_num; i++)
             {
                 if (vals[i] == 1)
                 {
@@ -165,9 +139,6 @@ void get_result_by_cplex()
             }
             cout << "lock_num:" << lock_num << endl;
         }
-        
-        delete[] var_index;
-        delete[] var_vertex;
     }
     catch (IloException & e) {
         cerr << "Concert exception caught: " << e << endl;
@@ -828,7 +799,7 @@ int main(int argc, char *argv[]){
     time_limit=atof(argv[2]);
 
     init();
-    get_result_by_cplex();
+    // cplex_result_origin_graph();
     //初始reduce
     init_reduce();
     print_reduce_graph_info();
@@ -840,7 +811,8 @@ int main(int argc, char *argv[]){
     subset_reduce();
     print_reduce_graph_info();
     generate_reduce_graph(2);
-    get_result_by_cplex();
+    cplex_result_origin_graph();
+    
     //检查是否为正确解
     // check();
     //释放内存
