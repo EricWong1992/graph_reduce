@@ -149,6 +149,83 @@ void cplex_result_origin_graph()
     env.end();
 }
 
+void cplex_result_reduce_graph()
+{
+    IloEnv env;
+    try {
+        IloModel model(env);
+        IloNumVarArray vars(env);
+        vector<int> remain_vertex_index(vertex_num);
+        int remain_cnt = 0;     //剩余顶点数量
+        for (size_t i = 0; i < vertex_num; i++)
+        {
+            if (cs[i].state == State::Candidate)
+            {
+                //添加变量，取值为{0,1}
+                vars.add(IloNumVar(env, 0, 1, IloNumVar::Int, ("x"+to_string(i)).c_str()));
+                remain_vertex_index[i] = remain_cnt++;
+            }
+        }
+        //构造目标函数
+        IloExpr obj = vars[0];
+        for (size_t i = 1; i < remain_cnt; i++)
+        {
+            obj += vars[i];
+        }
+        model.add(IloMinimize(env, obj));
+        
+        int constraint_cnt = 0;
+        for (size_t i = 0; i < vertex_num; i++)
+        {
+            if (cs[i].num_in_c > 0)
+            {
+                continue;
+            }
+            constraint_cnt++;
+            IloIntVar initExpr(env, 0, 0);
+            IloExpr constraint = initExpr;
+            for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
+            {
+                int v_n = vertex[i][j];
+                if (cs[v_n].state == State::Candidate)
+                {
+                    constraint += vars[remain_vertex_index[v_n]];
+                }
+            }
+            model.add(constraint >= 1);
+        }
+        cout << "constraint_cnt:" << constraint_cnt << endl;
+        IloCplex cplex(model);
+        if (!cplex.solve())
+        {
+            env.error() << "Failed to optimize LP." << endl;
+            throw(-1);
+        }
+        else
+        {
+            IloNumArray vals(env);
+            env.out() << "Solution status = " << cplex.getStatus() << endl;
+            cplex.getValues(vals, vars);
+            int lock_num = 0;
+            for (size_t i = 0; i < remain_cnt; i++)
+            {
+                if (vals[i] == 1)
+                {
+                    lock_num++;
+                }
+            }
+            cout << "lock_num:" << lock_num << endl;
+        }
+    }
+    catch (IloException & e) {
+        cerr << "Concert exception caught: " << e << endl;
+    }
+    catch (...) {
+        cerr << "Unknown exception caught" << endl;
+    }
+    env.end();
+}
+
 void init_reduce()
 {
     int i, j;
@@ -634,7 +711,7 @@ void print_reduce_graph_info()
         default:
             break;
         }
-        if (cs[i].state == State::Candidate && cs[i].num_in_c == 0)
+        if (cs[i].num_in_c == 0)
         {
             uncover_num++;
         }
@@ -811,7 +888,7 @@ int main(int argc, char *argv[]){
     subset_reduce();
     print_reduce_graph_info();
     generate_reduce_graph(2);
-    cplex_result_origin_graph();
+    cplex_result_reduce_graph();
     
     //检查是否为正确解
     // check();
