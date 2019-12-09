@@ -77,6 +77,7 @@ void test_cplex()
     env.end();
 }
 
+//用cplex求解初始图
 void cplex_result_origin_graph()
 {
     IloEnv env;
@@ -149,6 +150,8 @@ void cplex_result_origin_graph()
     env.end();
 }
 
+
+//用cplex求解剩余图
 void cplex_result_reduce_graph()
 {
     IloEnv env;
@@ -177,13 +180,22 @@ void cplex_result_reduce_graph()
         int constraint_cnt = 0;
         for (size_t i = 0; i < vertex_num; i++)
         {
+            //把所有未支配顶点的邻居中剩余顶点作为约束条件
             if (cs[i].num_in_c > 0)
             {
                 continue;
             }
             constraint_cnt++;
+            //IloExpr声明时必须初始化，设置一个为0的IloIntVar作为初始表达式
             IloIntVar initExpr(env, 0, 0);
+            //声明约束表达式
             IloExpr constraint = initExpr;
+            //如果未支配顶点是剩余顶点，则把自身也添加到约束条件
+            if (cs[i].state == State::Candidate)
+            {
+                constraint += vars[remain_vertex_index[i]];
+            }
+            //把未支配的顶点邻居里的剩余顶点加入约束条件
             for (size_t j = 0; j < vertex_neightbourNum[i]; j++)
             {
                 int v_n = vertex[i][j];
@@ -192,10 +204,12 @@ void cplex_result_reduce_graph()
                     constraint += vars[remain_vertex_index[v_n]];
                 }
             }
+            //把约束条件添加到模型里
             model.add(constraint >= 1);
         }
         cout << "constraint_cnt:" << constraint_cnt << endl;
         IloCplex cplex(model);
+        //cplex求解
         if (!cplex.solve())
         {
             env.error() << "Failed to optimize LP." << endl;
