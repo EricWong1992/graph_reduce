@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <utility>
 #include <queue>
+#include "ilcplex/ilocplex.h"
 
 using namespace std;
 
@@ -128,6 +129,8 @@ long best_value;
 
 int vertex_num;//顶点个数
 
+int total_lock = 0; //fix顶点个数
+
 //未支配顶点信息
 int uncover_num;
 int  *uncover_vertex;
@@ -169,6 +172,7 @@ void print_reduce_graph_info();
 void print_density(int i);
 void print_degree();
 void generate_reduce_graph(int step);
+void add_select_vertex(vector<int>, IloNumArray, int);
 //释放内存
 void free_all(){
     free(vertex_neightbourNum_bak);

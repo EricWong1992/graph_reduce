@@ -1,6 +1,6 @@
 #include <iomanip>
 #include "gr.h"
-#include "ilcplex/ilocplex.h"
+
 
 #define reduce(i) cs[i].state = State::Delete;
 
@@ -159,6 +159,7 @@ void cplex_result_reduce_graph()
         IloModel model(env);
         IloNumVarArray vars(env);
         vector<int> remain_vertex_index(vertex_num);
+        vector<int> candidate_vertex(vertex_num);
         int remain_cnt = 0;     //剩余顶点数量
         for (size_t i = 0; i < vertex_num; i++)
         {
@@ -166,7 +167,10 @@ void cplex_result_reduce_graph()
             {
                 //添加变量，取值为{0,1}
                 vars.add(IloNumVar(env, 0, 1, IloNumVar::Int, ("x"+to_string(i)).c_str()));
-                remain_vertex_index[i] = remain_cnt++;
+                // vars.add(IloNumVar(env, 0.0, 1.0));
+                remain_vertex_index[i] = remain_cnt;
+                candidate_vertex[remain_cnt] = i;
+                remain_cnt++;
             }
         }
         //构造目标函数
@@ -207,7 +211,7 @@ void cplex_result_reduce_graph()
             //把约束条件添加到模型里
             model.add(constraint >= 1);
         }
-        cout << "constraint_cnt:" << constraint_cnt << endl;
+        // cout << "constraint_cnt:" << constraint_cnt << endl;
         IloCplex cplex(model);
         //cplex求解
         if (!cplex.solve())
@@ -229,6 +233,8 @@ void cplex_result_reduce_graph()
                 }
             }
             cout << "lock_num:" << lock_num << endl;
+            cout << "total_lock:" << lock_num + total_lock << endl;
+            add_select_vertex(candidate_vertex, vals, remain_cnt);
         }
     }
     catch (IloException & e) {
@@ -238,6 +244,18 @@ void cplex_result_reduce_graph()
         cerr << "Unknown exception caught" << endl;
     }
     env.end();
+}
+
+//添加cplex选出来的顶点
+void add_select_vertex(vector<int> vec_remain, IloNumArray vals, int remain_cnt)
+{
+    for (size_t i = 0; i < remain_cnt; i++)
+    {
+        if (vals[i] == 1)
+        {
+            lock_vertex(vec_remain[i]);
+        }
+    }
 }
 
 void init_reduce()
@@ -377,6 +395,7 @@ void lock_vertex(int c)
 {
     if (cs[c].state == State::Fixed)
         return;
+    total_lock++;
     cs[c].state = State::Fixed;
     cs[c].score = -cs[c].score;
     if (cs[c].score == 0 && t_index[c] == -1 && cs[c].state != State::Fixed)
@@ -706,6 +725,7 @@ void print_reduce_graph_info()
     int remove_num = 0;         //确定删除的顶点数量
     remain_num = 0;                 //经过reduce后剩余顶点数量
     int forbid_add_num = 0;     //subset_reduce确定一定不再最优解的顶点数量
+    int dominate_num = 0;
     for (size_t i = 0; i < vertex_num; i++)
     {
         switch (cs[i].state)
@@ -729,14 +749,19 @@ void print_reduce_graph_info()
         {
             uncover_num++;
         }
+        else
+        {
+            dominate_num++;
+        }
     }
     std::cout << "Total Vertex: " << vertex_num << endl;
     std::cout << "Delete Vertex: " << remove_num << endl;
-    std::cout << "Fixed Vertex: " << locked_num << endl;
-    std::cout << "Uncover Vertex: " << uncover_num << endl;
-    std::cout << "Remain Vertex:" << remain_num << endl;
     std::cout << "Forbid Add: " << forbid_add_num << endl;
-    std::cout << "Percent: " <<  fixed << setprecision(2) << remain_num * 1.0 / vertex_num * 100 << "%" << endl;
+    std::cout << "Fixed Vertex: " << locked_num << endl;
+    std::cout << "Remain Vertex:" << remain_num << endl;
+    std::cout << "Cover Vertex: " << dominate_num << endl;
+    std::cout << "Uncover Vertex: " << uncover_num << endl;
+    // std::cout << "Percent: " <<  fixed << setprecision(2) << remain_num * 1.0 / vertex_num * 100 << "%" << endl;
 }
 
 void print_density(int idx)
@@ -905,7 +930,11 @@ int main(int argc, char *argv[]){
     cplex_result_reduce_graph();
     
     //检查是否为正确解
-    // check();
+    if (is_all_dominated())
+    {
+        cout << "Check OK" << endl;
+    }
+    
     //释放内存
     free_all();
     return 0;
