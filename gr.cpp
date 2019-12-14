@@ -225,13 +225,16 @@ void cplex_result_reduce_graph()
             env.out() << "Solution status = " << cplex.getStatus() << endl;
             cplex.getValues(vals, vars);
             int lock_num = 0;
+            double obj_value = 0.0;
             for (size_t i = 0; i < remain_cnt; i++)
             {
-                if (vals[i] == 1)
+                if (vals[i] != 0)
                 {
                     lock_num++;
                 }
+                obj_value += vals[i];
             }
+            cout << "objective expr: " << obj_value << endl;
             cout << "lock_num:" << lock_num << endl;
             cout << "total_lock:" << lock_num + total_lock << endl;
             add_select_vertex(candidate_vertex, vals, remain_cnt);
@@ -915,7 +918,7 @@ int main(int argc, char *argv[]){
     time_limit=atof(argv[2]);
 
     init();
-    // cplex_result_origin_graph();
+    cplex_result_origin_graph();
     //初始reduce
     init_reduce();
     print_reduce_graph_info();
