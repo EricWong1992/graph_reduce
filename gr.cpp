@@ -28,55 +28,6 @@ void init() {
     }
 }
 
-//cplex小例子
-void test_cplex()
-{
-    IloEnv env;
-    try {
-        IloModel model(env);
-        IloNumVarArray vars(env);
-        for (size_t i = 0; i < 7; i++)
-        {
-            vars.add(IloNumVar(env, 0, 1, IloNumVar::Int));
-        }
-        IloExpr obj = vars[0];
-        for (size_t i = 1; i < 7; i++)
-        {
-            obj += vars[i];
-        }
-        model.add(IloMinimize(env, obj));
-        model.add(vars[0] + vars[1] >= 1);
-        model.add(vars[1] + vars[0] >= 1);
-        model.add(vars[2] + vars[3] >= 1);
-        model.add(vars[3] + vars[1] + vars[2] + vars[4] + vars[5] >= 1);
-        model.add(vars[4] + vars[3] >= 1);
-        model.add(vars[5] + vars[3] + vars[6] >= 1);
-        model.add(vars[6] + vars[5] >= 1);
-
-        IloCplex cplex(model);
-        if (!cplex.solve()) {
-            env.error() << "Failed to optimize LP." << endl;
-            throw(-1);
-        }
-
-        IloNumArray vals(env);
-        env.out() << "Solution status = " << cplex.getStatus() << endl;
-        env.out() << "Solution value = " << cplex.getObjValue() << endl;
-        cplex.getValues(vals, vars);
-        env.out() << "Values = " << vals << endl;
-        //导出问题
-        cplex.exportModel("lpex1.lp");
-    }
-    catch (IloException & e) {
-        cerr << "Concert exception caught: " << e << endl;
-    }
-    catch (...) {
-        cerr << "Unknown exception caught" << endl;
-    }
-
-    env.end();
-}
-
 //用cplex求解初始图
 void cplex_result_origin_graph()
 {
@@ -907,8 +858,6 @@ int check(){
 
 int main(int argc, char *argv[]){
 
-    // test_cplex();
-
     if(argc<2){
         printf("input wrong\n");
         return 0;
@@ -918,19 +867,19 @@ int main(int argc, char *argv[]){
     time_limit=atof(argv[2]);
 
     init();
-    cplex_result_origin_graph();
+    // cplex_result_origin_graph();
     //初始reduce
     init_reduce();
     print_reduce_graph_info();
     //超集缩减
     superset_reduce();
     print_reduce_graph_info();
-    generate_reduce_graph(1);
+    // generate_reduce_graph(1);
     //子集缩减
     subset_reduce();
     print_reduce_graph_info();
     generate_reduce_graph(2);
-    cplex_result_reduce_graph();
+    // cplex_result_reduce_graph();
     
     //检查是否为正确解
     if (is_all_dominated())
