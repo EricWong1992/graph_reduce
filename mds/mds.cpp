@@ -46,7 +46,7 @@ int *neighbor_in_solution;//用来记录顶点与当前解中的邻居个数
 //int *v_weight;
 Edge *edge;//用来记录边，在初始化以后因为不用到了，就释放掉
 Vertex_sort *vertex_sort;//用来顶点排序
-Vertex *vertex;//顶点数组
+//Vertex *vertex;//顶点数组
 
 Array *crusol;//当前解数组
 Array *remaining_vertex;//初始化约减后存储剩余的顶点
@@ -476,7 +476,7 @@ void reduce_graph_2()//通过寻找超集来reduce
     while( !q_searchset.empty())
     {
         int v = q_searchset.front();
-        q_searchset.pop;
+        q_searchset.pop();
         vertex[v].is_in_search = 0;
         if (vertex[v].num_in_c != 0)
             continue;
@@ -1165,11 +1165,11 @@ void  reduce_graph_in_BB(int* &begin, int* &end, int rev)//BB过程中的reduce2
     for(ii = begin; ii < end; ii++)//计算U中顶点在U中的度，存入state变量中，因为reduce2过程中没有动态更新度，动态更新更费时
     {
         v = *ii;
-        vertex[v].state = 0;
+        vertex[v].state = State::Candidate;
         for(i = 0; i < vertex[v].degree; i++)
         {
             if(temp_index[vertex[v].neighbor[i]])
-                vertex[v].state++;
+                vertex[v].state = vertex[v].state++;
         }
     }
 }

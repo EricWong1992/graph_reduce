@@ -14,6 +14,14 @@ enum State//顶点状态定义
     Forbid,                         //禁止加入最优解，但又不可删除
 };
 
+//枚举++运算符重载
+State& operator ++(State& s)
+{
+    int i = s;
+    s = (enum State)(i+1);
+    return s;
+}
+
 struct Vertex//顶点数据结构
 {
     State state;                //顶点状态
