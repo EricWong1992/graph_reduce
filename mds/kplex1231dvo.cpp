@@ -22,7 +22,6 @@ using namespace std;
 #define insert_v(end, value) *(end++) = value;
 #define delete_i(index, end) *index = *(--end);
 #define fix(i) vertex[i].state = State::Fixed;
-#define reduce(i) vertex[i].state = State::Delete;
 
 int v_n;//顶点个数
 int e_n;//边个数
@@ -282,10 +281,21 @@ void printf_solution()//打印最优解，这边只输出当前最优解的规�
 
 }
 
+void reduce(int v)//直接reduce顶点v
+{
+    if (vertex[v].state != State::Delete)
+    {
+        vertex[v].state = State::Delete;
+        remain_num--;
+    }
+}
+
 void reduce_v(int v)//如果v的score为0,reduce
 {
     if (vertex[v].score == 0)
+    {
         reduce(v);
+    }
 }
 
 void fix_vertex(int v)//固定顶点v到最优解
@@ -299,7 +309,7 @@ void fix_vertex(int v)//固定顶点v到最优解
         uncover_num--;
     for (size_t i = 0; i < neighbor_len[v]; i++)
     {
-        int v_neighbor = vertex[v].neighbor[i];
+        int v_neighbor = getVertex(v, i);
         if (vertex[v_neighbor].num_in_c == 0)
             uncover_num--;
         vertex[v_neighbor].num_in_c++;
@@ -330,7 +340,7 @@ void fix_vertex(int v)//固定顶点v到最优解
         int s = 0;
         for (size_t j = 0; j < neighbor_len[v_neighbor]; j++)
         {
-            int v_n_n = vertex[v_neighbor].neighbor[j];//二层邻居
+            int v_n_n = getVertex(v_neighbor, j);//二层邻居顶点
             if (v_n_n == v)
             {
                 continue;
@@ -351,25 +361,387 @@ void fix_vertex(int v)//固定顶点v到最优解
             //v是闭邻居里第一个加入候选解的
             vertex[v_neighbor].score -= 1;
             reduce_v(v_neighbor);
-            
+            for (size_t k = 0; k < neighbor_len[v_neighbor]; k++)
+            {
+                int n_v_v = getVertex(v_neighbor, k);
+                if (n_v_v == v)
+                    continue;
+                //被c支配，所以二层邻居v_n_n score值减少
+                vertex[v_neighbor].score -= 1;
+                reduce_v(n_v_v);
+            }
         }
+        else if (cnt == 1)
+        {
+            vertex[s].score += 1;
+            reduce_v(s);
+        }
+        reduce_v(v_neighbor);
     }
-    
+    vertex[v].num_in_c++;
 }
 
 void reduce_graph_1()//reduce边缘顶点
 {
+    std::cout << "-->1.init reduce" << std::endl;
+    int a,b,c;
     for (size_t i = 0; i < v_n; i++)
     {
         if (vertex[i].degree == 1)
         {
-            int v_neighbor = vertex[i].neighbor[0];
+            int v_neighbor = getVertex(i, 0);
             if (vertex[i].state != State::Fixed)
             {
                 reduce(i);
+                fix_vertex(v_neighbor);
+            }
+        }
+        else if (vertex[i].degree == 2)
+        {
+            if (vertex[getVertex(i, 0)].degree == 2)
+            {
+                a = getVertex(i, 0);
+                b = getVertex(i, 1);
+            }
+            else if (vertex[getVertex(i, 1)].degree == 2)
+            {
+                a = getVertex(i, 1);
+                b = getVertex(i, 0);
+            }
+            else
+            {
+                continue;
+            }
+            if (getVertex(a, 0) == i)
+            {
+                c = getVertex(a, 1);
+            }
+            else
+            {
+                c = getVertex(a, 0);
+            }
+            if (b == c)
+            {
+                if (vertex[i].state != State::Fixed && vertex[a].state != State::Fixed)
+                {
+                    reduce(i);
+                    reduce(a);
+                    fix_vertex(b);
+                }
+            }
+        }
+        else if (vertex[i].degree == 0)
+        {
+            fix_vertex(i);
+        }
+        else
+        {
+            int sum = 0;
+            for (size_t j = 0; j < neighbor_len[i]; j++)
+            {
+                if (neighbor_len[getVertex(i, j)] == 1)
+                {
+                    sum += vertex[getVertex(i, j)].cost;
+                }
+            }
+            if (sum > vertex[i].cost)
+            {
+                for (size_t j = 0; j < neighbor_len[i]; j++)
+                {
+                    if (neighbor_len[getVertex(i, j)] == 1)
+                    {
+                        reduce(getVertex(i, j));
+                    }
+                }
+                fix_vertex(i);
             }
         }
     }
+    //TODO 标记删除的顶点是否真的从图中删除
+}
+
+void reduce_graph_2()//通过寻找超集来reduce
+{
+    std::cout << "-->2.superset reduce" << endl;
+    queue<int> q_searchset;
+    for (size_t i = 0; i < v_n; i++)
+    {
+        if (vertex[i].num_in_c == 0)
+        {
+            vertex[i].is_in_search = 1;
+            q_searchset.push(i);
+        }
+    }
+    //逐渐出队，直到为空
+    while( !q_searchset.empty())
+    {
+        int v = q_searchset.front();
+        q_searchset.pop;
+        vertex[v].is_in_search = 0;
+        if (vertex[v].num_in_c != 0)
+            continue;
+        int set_count = 0;
+        int max_score_index = v;
+        int max_score = vertex[v].score;
+        vector<Vertex_sort_score> vec(neighbor_len[v] + 1);//+1代表自己也算在内
+        vec[set_count++] = {v, vertex[v].score};
+        for (size_t i = 0; i < neighbor_len[v]; i++)
+        {
+            int v_neighbor = getVertex(v, i);
+            if (vertex[v_neighbor].score > 0)
+            {
+                vec[set_count++] = {v_neighbor, vertex[v_neighbor].score};
+                if (vertex[v_neighbor].score > vertex[max_score_index].score)
+                {
+                    max_score_index = v_neighbor;
+                    max_score = vertex[v_neighbor].score;
+                }
+            }
+        }
+        if (set_count == 1)
+        {
+            fix_vertex(v);
+        }
+        else
+        {
+            //目标超集类
+            auto max_set = new NeighborSet(max_score_index, neighbor_len[v] + 1);
+            int cnt = 0;
+            //初始化超集候选集合元素
+            if (vertex[max_score_index].num_in_c == 0)
+            {
+                max_set->add_neighbor(max_score_index);
+                cnt++;
+            }
+            for (size_t i = 0; i < neighbor_len[max_score_index] && cnt < max_score; i++)
+            {
+                int v_neighbor = getVertex(max_score_index, i);
+                if (vertex[v_neighbor].num_in_c == 0)
+                {
+                    max_set->add_neighbor(v_neighbor);
+                    cnt++;
+                }
+            }
+            //判断score值最大的集合是不是其他集合的超集
+            bool is_super_set = true;
+            for (size_t i = 0; i < set_count; i++)
+            {
+                if (vec[i].index == max_score_index)
+                    continue;
+                int v_neighbor = vec[i].index;
+                cnt = 0;
+                if (vertex[v_neighbor].num_in_c == 0)
+                {
+                    if (!max_set->is_in_set(v_neighbor))
+                    {
+                        is_super_set = false;
+                        break;
+                    }
+                    else
+                        cnt++;
+                }
+                for (size_t j = 0; j < neighbor_len[v_neighbor] && cnt < vec[i].score; j++)
+                {
+                    int v_neighbor_neighbor = getVertex(v_neighbor, j);
+                    if (vertex[v_neighbor_neighbor].num_in_c == 0)
+                    {
+                        if (max_set->is_in_set(v_neighbor_neighbor))
+                        {
+                            cnt++;
+                        }
+                        else
+                        {
+                            is_super_set = false;//不是超集，跳出循环
+                            break;
+                        }
+                    }
+                }
+                if (!is_super_set)
+                    break;
+            }
+            if (is_super_set)
+            {
+                int max_v = max_set->getV();
+                fix_vertex(max_v);
+                //max_set->getV()的所有未覆盖的二层邻居都加入搜索队列
+                for (size_t i = 0; i < neighbor_len[max_v]; i++)
+                {
+                    int v_n = getVertex(max_v, i);
+                    for (size_t j = 0; j < neighbor_len[v_n]; j++)
+                    {
+                        int v_n_n = getVertex(v_n, j);
+                        /*
+                            v_n_n的邻居有未支配的顶点
+                            v_n的支配次数不止一次，也就是在加入定点max_v后，v_n_n的score值发生变化
+                        */
+                       if (vertex[v_n_n].score > 0 && vertex[v_n].num_in_c == 1)
+                       {
+                           int cnt2 = 0;
+                           if (vertex[v_n_n].num_in_c == 0 && vertex[v_n_n].is_in_search == 0)
+                           {
+                               vertex[v_n_n].is_in_search = 1;
+                               q_searchset.push(v_n_n);
+                               cnt2++;
+                           }
+                           for (size_t k = 0; k < neighbor_len[v_n_n] && cnt2 < vertex[v_n_n].score; k++)
+                           {
+                               int v_n_n_n = getVertex(v_n_n, k);
+                               //未支配且不在搜索集的三层邻居加入搜索集
+                               if (vertex[v_n_n_n].num_in_c == 0 && vertex[v_n_n_n].is_in_search == 0)
+                               {
+                                   vertex[v_n_n_n].is_in_search = 1;
+                                   q_searchset.push(v_n_n_n);
+                                   cnt2++;
+                               }
+                           }
+                       }
+                    }
+                }
+            }
+            delete max_set;
+        }
+    }
+}
+
+void reduce_graph_3()//子集reduce
+{
+    std::cout << "-->3. subset reduce" << std::endl;
+    for (size_t i = 0; i < v_n; i++)
+    {
+        if (vertex[i].state == State::Candidate)
+        {
+            int cnt = 1;        //i本身也要存在集合里面，记录i的闭邻居集合有多少元素
+            for (size_t j = 0; j < neighbor_len[i]; j++)
+            {
+                int v_n = getVertex(i, j);
+                if (vertex[v_n].score > 0)
+                    cnt++;
+            }
+            //构造所有邻居集合
+            vector<NeighborSet*> sets(cnt);
+            sets[0] = new NeighborSet(i, neighbor_len[i] + 1);
+            sets[0]->add_neighbor(i);
+            int cnt1 = 0;
+            for (size_t j = 0; j < neighbor_len[i] && cnt1 < cnt; j++)
+            {
+                int v_n = getVertex(i, j);
+                if (vertex[v_n].score > 0)
+                {
+                    if (vertex[v_n].num_in_c == 0)
+                        sets[0]->add_neighbor(v_n);
+                    cnt1++;
+                    sets[cnt1] = new NeighborSet(v_n, neighbor_len[v_n] + 1);
+                    int cnt2 = 0;
+                    if (vertex[v_n].num_in_c == 0)
+                    {
+                        sets[cnt1]->add_neighbor(v_n);
+                        cnt2++;
+                    }
+                    for (size_t k = 0; k < neighbor_len[v_n] && cnt2 < vertex[v_n].score; k++)
+                    {
+                        int v_n_n = getVertex(v_n, k);
+                        if (vertex[v_n_n].num_in_c == 0)
+                        {
+                            sets[cnt1]->add_neighbor(v_n_n);
+                            cnt2++;
+                        }
+                    }
+                }
+            }
+            //循环遍历删除子集顶点
+            for (size_t j = 0; j < sets.size(); j++)
+            {
+                for (size_t k = 0; k < sets.size(); k++)
+                {
+                    auto set_a = sets[j];
+                    auto set_b = sets[k];
+                    //外层顶点已经被删除，跳出内部循环
+                    if (vertex[set_a->getV()].state == State::Forbid)
+                        break;
+                    //内部顶点已经被删除，跳过本次循环
+                    if (vertex[set_b->getV()].state == State::Forbid)
+                        continue;
+                    /*
+                        1.如果set_b元素数量比set_a多，交换指针，set_b始终是待判断子集的指针
+                        2.如果两个顶点的有效邻居数量相等，判断是否互为子集
+                    */
+                   if (set_a->get_valid_neighbor_cnt() < set_b->get_valid_neighbor_cnt())
+                   {
+                       auto temp = set_b;
+                       set_b = set_a;
+                       set_a = temp;
+                   }
+                   //判断set_b是不是set_a的子集
+                   bool is_subset = true;
+                   for (size_t s = 0; s < set_b->get_neighbor_cnt(); s++)
+                   {
+                       //已支配顶点不用判断
+                       if (vertex[set_b->get_neighbor(s)].num_in_c == 0 && !set_a->is_in_set(set_b->get_neighbor(s)))
+                       {
+                           is_subset = false;
+                           break;
+                       }
+                   }
+                   if (is_subset)
+                   {
+                       //set_b是set_a的子集，把set_b的头元素排除在候选解之外
+                       vertex[set_b->getV()].state = State::Forbid;
+                   }
+                }
+            }
+            //free memory
+            for (auto & set : sets)
+            {
+                delete set;
+            }
+        }
+    }
+}
+
+void print_reduce_graph_info()//打印规约图数据
+{
+    int locked_num = 0;         //确定在最优解的顶点数量
+    int uncover_num = 0;        //经过两次reduce后未支配顶点数量
+    int remove_num = 0;         //确定删除的顶点数量
+    remain_num = 0;                 //经过reduce后剩余顶点数量
+    int forbid_add_num = 0;     //subset_reduce确定一定不再最优解的顶点数量
+    int cover_num = 0;
+    for (size_t i = 0; i < v_n; i++)
+    {
+        switch (vertex[i].state)
+        {
+        case State::Candidate:
+            remain_num++;
+            break;
+        case State::Fixed:
+            locked_num++;
+            break;
+        case State::Delete:
+            remove_num++;
+            break;
+        case State::Forbid:
+            forbid_add_num++;
+            break;
+        default:
+            break;
+        }
+        if (vertex[i].num_in_c == 0)
+        {
+            uncover_num++;
+        }
+        else
+        {
+            cover_num++;
+        }
+    }
+    std::cout << "Total Vertex: " << v_n << endl;
+    std::cout << "Delete Vertex: " << remove_num << endl;
+    std::cout << "Forbid Add: " << forbid_add_num << endl;
+    std::cout << "Fixed Vertex: " << locked_num << endl;
+    std::cout << "Remain Vertex:" << remain_num << endl;
+    std::cout << "Cover Vertex: " << cover_num << endl;
+    std::cout << "Uncover Vertex: " << uncover_num << endl;
+    // std::cout << "Percent: " <<  fixed << setprecision(2) << remain_num * 1.0 / vertex_num * 100 << "%" << endl;
 }
 
 /*void reduce_edge_from_neighbor(int v, int mark)//update the neighbor list//更新边邻居，因为复杂度有些偏高，所以优化的时候，把这部分改掉了

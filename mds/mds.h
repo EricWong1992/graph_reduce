@@ -31,6 +31,12 @@ struct Vertex_sort//在顶点排序的时候方便记录顶点编号（用于顶
     int degree;
 };
 
+struct Vertex_sort_score//用于顶点排序根据score值排序
+{
+    int index;
+    int score;
+};
+
 Vertex *vertex;//顶点数组
 
 class NeighborSet//闭邻居集合类
@@ -44,8 +50,10 @@ public:
     ~NeighborSet();
     bool is_in_set(int);//判断一个顶点是否在闭邻居集合
     void add_neighbor(int);//添加邻居顶点
+    int get_neighbor(int);//获取指定位置邻居
     int get_valid_neighbor_cnt();//获取未支配邻居数量
     int get_neighbor_cnt();//获取邻居总数
+    int getV();//获取顶点V
 };
 
 NeighborSet::NeighborSet(int v, int capacity)
@@ -74,6 +82,11 @@ void NeighborSet::add_neighbor(int _v)
     }
 }
 
+int NeighborSet::get_neighbor(int pos)
+{
+    return neighbors->element_at(pos);
+}
+
 int NeighborSet::get_valid_neighbor_cnt()
 {
     return _validNeighborCnt;
@@ -84,4 +97,14 @@ int NeighborSet::get_neighbor_cnt()
     return neighbors->size();
 }
 
+int NeighborSet::getV()
+{
+    return _v;
+}
+
+//从二维数组获取顶点，即邻居顶点
+int getVertex(int i, int j)
+{
+    return vertex[i].neighbor[j];
+}
 #endif // !_MDS_H

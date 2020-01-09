@@ -7,3 +7,4 @@ cmake-build-debug/*
 *.mtx_r*
 *.lp
 gr
+*/*.mtx
