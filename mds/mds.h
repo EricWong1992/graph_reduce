@@ -14,14 +14,6 @@ enum State//顶点状态定义
     Forbid,                         //禁止加入最优解，但又不可删除
 };
 
-//枚举++运算符重载
-State& operator ++(State& s)
-{
-    int i = s;
-    s = (enum State)(i+1);
-    return s;
-}
-
 struct Vertex//顶点数据结构
 {
     State state;                //顶点状态
@@ -29,8 +21,8 @@ struct Vertex//顶点数据结构
     int cost;                       //顶点花费
     int score;						//加入该顶点后，自己及邻居从未支配到支配的顶点数量
     int is_in_search;       //是否在搜索集
-    int degree;
-    int *neighbor;
+    int degree;                 //顶点度
+    int *neighbor;          //邻居
 };
 
 struct Vertex_sort//在顶点排序的时候方便记录顶点编号（用于顶点排序）
