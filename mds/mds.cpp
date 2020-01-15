@@ -382,7 +382,7 @@ void fix_vertex(int v)//固定顶点v到最优解
 
 void reduce_graph_1()//reduce边缘顶点
 {
-    std::cout << "-->1.init reduce" << std::endl;
+    std::cout << "##################### reduce 1 #####################" << std::endl;
     int a,b,c;
     for (size_t i = 0; i < v_n; i++)
     {
@@ -461,7 +461,7 @@ void reduce_graph_1()//reduce边缘顶点
 
 void reduce_graph_2()//通过寻找超集来reduce
 {
-    std::cout << "-->2.superset reduce" << endl;
+    std::cout << "##################### reduce 2 #####################" << endl;
     queue<int> q_searchset;
     for (size_t i = 0; i < v_n; i++)
     {
@@ -482,7 +482,7 @@ void reduce_graph_2()//通过寻找超集来reduce
         int set_count = 0;
         int max_score_v = v;
         int max_score = vertex[v].score;
-        vector<Vertex_sort_score> vec(vertex[v].degree + 1);//+1代表自己也算在内
+        vector<vertex_sort_score> vec(vertex[v].degree + 1);//+1代表自己也算在内
         vec[set_count++] = {v, vertex[v].score};
         //构建闭邻居数组，并找出闭邻居中score值最大的顶点
         for (size_t i = 0; i < vertex[v].degree; i++)
@@ -588,18 +588,98 @@ void reduce_graph_2()//通过寻找超集来reduce
 
 void reduce_graph_3()//子集reduce
 {
-    std::cout << "-->3.subset reduce" << std::endl;
+    std::cout << "##################### reduce 3 #####################" << std::endl;
     for (size_t i = 0; i < v_n; i++)
     {
         if (vertex[i].state == State::Candidate)
         {
             int cnt = 1;        //i本身也要存在集合里面，记录i的闭邻居集合有多少元素
-            for (size_t j = 0; j < neighbor_len[i]; j++)
+            for (size_t j = 0; j < vertex[i].degree; j++)
             {
-                int v_n = getVertex(i, j);
-                if (vertex[v_n].score > 0)
+                int v_neighbor = getVertex(i, j);
+                if (vertex[v_neighbor].score > 0)
                     cnt++;
             }
+            //构造结构体
+            // vector<vertex_sort_valid_neighbor> sets(cnt);
+            // sets[0] = {(int)i, vertex[i].num_in_c == 0 ? 1 : 0};
+            // if (vertex[i].num_in_c == 0)
+            // {
+            //     sets[0].neighbors.push_back(i);
+            // }
+            // int cnt1 = 0;
+            // for (size_t j = 0; j < vertex[i].degree && cnt1 < cnt; j++)
+            // {
+            //     int v_neighbor = getVertex(i, j);
+            //     if (vertex[v_neighbor].score > 0)
+            //     {
+            //         if (vertex[v_neighbor].num_in_c == 0)
+            //         {
+            //             sets[0].valid_neighbor_cnt++;
+            //             sets[0].neighbors.push_back(v_neighbor);
+            //         }
+            //         cnt1++;
+            //         sets[cnt1] = {v_neighbor, vertex[v_neighbor].num_in_c == 0 ? 1 : 0};
+            //         int cnt2 = 0;
+            //         if (vertex[v_neighbor].num_in_c == 0)
+            //         {
+            //             cnt2++;
+            //             sets[cnt1].neighbors.push_back(v_neighbor);
+            //         }
+            //         for (size_t k = 0; k < vertex[v_neighbor].degree && cnt2 < vertex[v_neighbor].score; k++)
+            //         {
+            //             int v_n_n = getVertex(v_neighbor, k);
+            //             if (vertex[v_n_n].num_in_c == 0)
+            //             {
+            //                 sets[cnt1].valid_neighbor_cnt++;
+            //                 sets[cnt1].neighbors.push_back(v_n_n);
+            //                 cnt2++;
+            //             }
+            //         }
+            //     }
+            // }
+            // //循环遍历删除子集顶点
+            // for (size_t j = 0; j < sets.size(); j++)
+            // {
+            //     for (size_t k = j+1; k < sets.size(); k++)
+            //     {
+            //         auto set_a = sets[j];
+            //         auto set_b = sets[k];
+            //         //外层顶点已经被删除，跳出内部循环
+            //         if (vertex[set_a.index].state == State::Forbid)
+            //             break;
+            //         //内部顶点已经被删除，跳过本次循环
+            //         if (vertex[set_b.index].state == State::Forbid)
+            //             continue;
+            //         /*
+            //             1.如果set_b元素数量比set_a多，交换指针，set_b始终是待判断子集的指针
+            //             2.如果两个顶点的有效邻居数量相等，判断是否互为子集
+            //         */
+            //        if (set_a.valid_neighbor_cnt < set_b.valid_neighbor_cnt)
+            //        {
+            //            auto temp = set_b;
+            //            set_b = set_a;
+            //            set_a = temp;
+            //        }
+            //        //判断set_b是不是set_a的子集
+            //        bool is_subset = true;
+            //        for (size_t s = 0; s < vertex[set_b.index].degree; s++)
+            //        {
+            //            //已支配顶点不用判断
+            //            int v_in_b = getVertex(set_b.index, s);
+            //            if (vertex[v_in_b].num_in_c == 0 && !edge_is(set_a.index, v_in_b))
+            //            {
+            //                is_subset = false;
+            //                break;
+            //            }
+            //        }
+            //        if (is_subset)
+            //        {
+            //            //set_b是set_a的子集，把set_b的头元素排除在候选解之外
+            //            vertex[set_b.index].state = State::Forbid;
+            //        }
+            //     }
+            // }
             //构造所有邻居集合
             vector<NeighborSet*> sets(cnt);
             sets[0] = new NeighborSet(i, vertex[i].degree + 1);
@@ -607,22 +687,22 @@ void reduce_graph_3()//子集reduce
             int cnt1 = 0;
             for (size_t j = 0; j < vertex[i].degree && cnt1 < cnt; j++)
             {
-                int v_n = getVertex(i, j);
-                if (vertex[v_n].score > 0)
+                int v_neighbor = getVertex(i, j);
+                if (vertex[v_neighbor].score > 0)
                 {
-                    if (vertex[v_n].num_in_c == 0)
-                        sets[0]->add_neighbor(v_n);
+                    if (vertex[v_neighbor].num_in_c == 0)
+                        sets[0]->add_neighbor(v_neighbor);
                     cnt1++;
-                    sets[cnt1] = new NeighborSet(v_n, vertex[v_n].degree + 1);
+                    sets[cnt1] = new NeighborSet(v_neighbor, vertex[v_neighbor].degree + 1);
                     int cnt2 = 0;
-                    if (vertex[v_n].num_in_c == 0)
+                    if (vertex[v_neighbor].num_in_c == 0)
                     {
-                        sets[cnt1]->add_neighbor(v_n);
+                        sets[cnt1]->add_neighbor(v_neighbor);
                         cnt2++;
                     }
-                    for (size_t k = 0; k < vertex[v_n].degree && cnt2 < vertex[v_n].score; k++)
+                    for (size_t k = 0; k < vertex[v_neighbor].degree && cnt2 < vertex[v_neighbor].score; k++)
                     {
-                        int v_n_n = getVertex(v_n, k);
+                        int v_n_n = getVertex(v_neighbor, k);
                         if (vertex[v_n_n].num_in_c == 0)
                         {
                             sets[cnt1]->add_neighbor(v_n_n);
@@ -634,7 +714,7 @@ void reduce_graph_3()//子集reduce
             //循环遍历删除子集顶点
             for (size_t j = 0; j < sets.size(); j++)
             {
-                for (size_t k = 0; k < sets.size(); k++)
+                for (size_t k = j + 1; k < sets.size(); k++)
                 {
                     auto set_a = sets[j];
                     auto set_b = sets[k];
@@ -658,8 +738,10 @@ void reduce_graph_3()//子集reduce
                    bool is_subset = true;
                    for (size_t s = 0; s < set_b->get_neighbor_cnt(); s++)
                    {
+                       int v_in_set_b = set_b->get_neighbor(s);
                        //已支配顶点不用判断
-                       if (vertex[set_b->get_neighbor(s)].num_in_c == 0 && !set_a->is_in_set(set_b->get_neighbor(s)))
+                       if (vertex[v_in_set_b].num_in_c == 0 && !set_a->is_in_set(set_b->get_neighbor(s)))
+                       //if (vertex[v_in_set_b].num_in_c == 0 && !edge_is(v_in_set_b, set_a->getV()))
                        {
                            is_subset = false;
                            break;
@@ -1628,8 +1710,8 @@ int main(int argc, char *argv[])
     print_reduce_graph_info();
     reduce_graph_2();
     print_reduce_graph_info();
-    // reduce_graph_3();
-    // print_reduce_graph_info();
+    reduce_graph_3();
+    print_reduce_graph_info();
     /*
     char* File_Name;
     File_Name = argv[1];//读入文件名

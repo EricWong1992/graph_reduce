@@ -1,5 +1,6 @@
 #ifndef _MDS_H
 #include "Array.h"
+#include <vector>
 
 struct Edge//边定义
 {
@@ -31,11 +32,18 @@ struct Vertex_sort//在顶点排序的时候方便记录顶点编号（用于顶
     int degree;
 };
 
-struct Vertex_sort_score//用于顶点排序根据score值排序
+struct vertex_sort_score//用于顶点排序根据score值排序
 {
     int index;
     int score;
 };
+
+// struct vertex_sort_valid_neighbor//用于子集缩减中有效闭邻居大小的比较
+// {
+//     int index;
+//     int valid_neighbor_cnt;
+//     std::vector<int> neighbors;
+// };
 
 Vertex *vertex;//顶点数组
 
@@ -43,8 +51,11 @@ class NeighborSet//闭邻居集合类
 {
 private:
     int _v;//顶点
-    Array* neighbors;//邻居顶点集合
+    // int* _neighbors;//邻居顶点集合
+    std::vector<int> _neighbors;
     int _validNeighborCnt = 0;//有效邻居个数，即未支配邻居个数
+    int _size = 0;//容量
+    int _capacity = 0;//容量上限
 public:
     NeighborSet(int v, int capacity);
     ~NeighborSet();
@@ -59,24 +70,31 @@ public:
 NeighborSet::NeighborSet(int v, int capacity)
 {
      _v = v;
-     neighbors = new Array(capacity);
+     _capacity = capacity;
+    //  _neighbors = new int[capacity];
+    _neighbors = std::vector<int>(capacity);
 }
 
 NeighborSet::~NeighborSet()
 {
-    delete neighbors;
-    neighbors = nullptr;
+    // delete[] _neighbors;
+    // _neighbors = nullptr;
 }
 
-bool NeighborSet::is_in_set(int _v)
+bool NeighborSet::is_in_set(int v)
 {
-    return neighbors->is_in_array(_v);
+    for (size_t i = 0; i < _size; i++)
+    {
+        if (_neighbors[i] == v)
+            return true;
+    }
+    return false;
 }
 
-void NeighborSet::add_neighbor(int _v)
+void NeighborSet::add_neighbor(int v)
 {
-    neighbors->insert_element(_v);
-    if (vertex[_v].num_in_c == 0)
+    _neighbors[_size++] = v;
+    if (vertex[v].num_in_c == 0)
     {
         _validNeighborCnt++;
     }
@@ -84,7 +102,7 @@ void NeighborSet::add_neighbor(int _v)
 
 int NeighborSet::get_neighbor(int pos)
 {
-    return neighbors->element_at(pos);
+    return _neighbors[pos];
 }
 
 int NeighborSet::get_valid_neighbor_cnt()
@@ -94,7 +112,7 @@ int NeighborSet::get_valid_neighbor_cnt()
 
 int NeighborSet::get_neighbor_cnt()
 {
-    return neighbors->size();
+    return _size;
 }
 
 int NeighborSet::getV()
@@ -107,4 +125,5 @@ int getVertex(int i, int j)
 {
     return vertex[i].neighbor[j];
 }
+
 #endif // !_MDS_H
