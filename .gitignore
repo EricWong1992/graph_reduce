@@ -8,3 +8,6 @@ cmake-build-debug/*
 *.lp
 gr
 */*.mtx
+*/mds
+*/cmake-build-debug
+/mds/.idea/*
