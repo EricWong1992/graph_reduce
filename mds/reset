@@ -1,0 +1,3 @@
+rm mds
+make
+./mds ca-dblp-2012.mtx
