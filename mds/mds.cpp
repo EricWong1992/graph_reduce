@@ -286,6 +286,7 @@ void reduce(int v)//直接reduce顶点v
     {
         vertex[v].state = State::Delete;
         remain_num--;
+        remaining_vertex->delete_element(v);
     }
 }
 
@@ -303,6 +304,8 @@ void fix_vertex(int v)//固定顶点v到最优解
         return;
     fix_num++;
     vertex[v].state = State::Fixed;
+    //从剩余顶点集合中移除
+    remaining_vertex->delete_element(v);
     vertex[v].score = -vertex[v].score;
     if (vertex[v].num_in_c == 0)
         uncover_num--;
@@ -751,6 +754,8 @@ void reduce_graph_3()//子集reduce
                    {
                        //set_b是set_a的子集，把set_b的头元素排除在候选解之外
                        vertex[set_b->getV()].state = State::Forbid;
+                       //从剩余顶点中移除
+                       remaining_vertex->delete_element(set_b->getV());
                    }
                 }
             }
@@ -760,6 +765,73 @@ void reduce_graph_3()//子集reduce
                 delete set;
             }
         }
+    }
+}
+
+void reduce_graph_4()
+{
+    std::cout << "##################### reduce 4 #####################" << std::endl;
+    unordered_set<int> target_vertex;//记录需要标记为已支配的顶点
+    //所有未支配顶点
+    for (size_t i = remaining_vertex->begin(); i < remaining_vertex->size(); i++)
+    {
+        int v = remaining_vertex->element_at(i);
+        //未支配顶点的剩余顶点闭邻居集合
+        unordered_set<int> c_neighbors;
+        //闭邻居集合支配的未支配顶点集合，交集顶点从此集合产生
+        unordered_set<int> dominated_vertex;
+        //交集
+        unordered_set<int> intersection;
+        c_neighbors.insert(v);
+        dominated_vertex.insert(v);
+        for (size_t j = 0; j < vertex[v].degree; j++)
+        {
+            int v_neighbor = getVertex(v, j);
+            if (vertex[v_neighbor].state == State::Candidate)
+            {
+                c_neighbors.insert(v_neighbor);
+                if (vertex[v_neighbor].num_in_c == 0)
+                    dominated_vertex.insert(v_neighbor);
+                for (size_t k = 0; k < vertex[v_neighbor].degree; k++)
+                {
+                    int v_n_n = getVertex(v_neighbor, k);
+                    if (vertex[v_n_n].state == State::Candidate && vertex[v_n_n].num_in_c == 0)
+                    {
+                        dominated_vertex.insert(v_n_n);
+                    }
+                }
+            }
+        }
+        //查找并集
+        for (auto & dominated_v: dominated_vertex)
+        {
+            bool is_all_connect = true;
+            for (auto & neighbor: c_neighbors)
+            {
+                if (!edge_is(dominated_v, neighbor))
+                {
+                    is_all_connect = false;
+                    break;
+                }
+            }
+            if (is_all_connect)
+            {
+                intersection.insert(dominated_v);
+            }
+        }
+        //并集数量大于2则把并集数据合入要修改的顶点
+        if (intersection.size() >= 1)
+        {
+            for (auto & v:intersection)
+            {
+                target_vertex.insert(v);
+            }
+        }
+    }
+    //修改查找到的顶点为已支配
+    for (auto & v : target_vertex)
+    {
+        reduce(v);
     }
 }
 
@@ -1711,6 +1783,8 @@ int main(int argc, char *argv[])
     reduce_graph_2();
     print_reduce_graph_info();
     reduce_graph_3();
+    print_reduce_graph_info();
+    reduce_graph_4();
     print_reduce_graph_info();
     /*
     char* File_Name;
